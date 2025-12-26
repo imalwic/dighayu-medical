@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, getDocs, addDoc, deleteDoc, doc, orderBy, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, addDoc, deleteDoc, doc, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import jsPDF from 'jspdf';
@@ -24,7 +24,6 @@ export default function AdminDashboard() {
   // Holidays
   const [holidayDate, setHolidayDate] = useState("");
   const [holidayType, setHolidayType] = useState("poya"); 
-  // 🔥 1. Session State එක හැදුවා (full, morning, evening)
   const [holidaySession, setHolidaySession] = useState("full"); 
   const [holidaysList, setHolidaysList] = useState<any[]>([]);
 
@@ -33,6 +32,10 @@ export default function AdminDashboard() {
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffPassword, setNewStaffPassword] = useState("");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  // 🔥 NEW: Doctor Profile Image State
+  const [doctorImg, setDoctorImg] = useState("/doctor.jpeg"); // Default Image
+  const [uploadingImg, setUploadingImg] = useState(false);
 
   // 1. Security Check
   useEffect(() => {
@@ -92,13 +95,22 @@ export default function AdminDashboard() {
         setStaffList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    // 🔥 NEW: Fetch Current Doctor Image
+    const fetchDoctorImg = async () => {
+        const docRef = doc(db, "settings", "doctorProfile");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().image) {
+            setDoctorImg(docSnap.data().image);
+        }
+    };
+    fetchDoctorImg();
+
     return () => { unsubRevenue(); unsubAppt(); unsubHolidays(); unsubStaff(); };
   }, []);
 
   // Functions
   const handleAddHoliday = async () => {
     if (!holidayDate) return alert("Select a date");
-    // 🔥 2. Session එකත් එක්ක Save කරනවා
     await addDoc(collection(db, "holidays"), { 
         date: holidayDate, 
         type: holidayType, 
@@ -106,7 +118,7 @@ export default function AdminDashboard() {
     });
     alert("Holiday Added"); 
     setHolidayDate("");
-    setHolidaySession("full"); // Reset to full
+    setHolidaySession("full");
   };
 
   const handleDeleteHoliday = async (id: string) => await deleteDoc(doc(db, "holidays", id));
@@ -126,6 +138,37 @@ export default function AdminDashboard() {
     if(!confirm("Remove access?")) return;
     await deleteDoc(doc(db, "staff_access", code));
     alert("Removed");
+  };
+
+  // 🔥 NEW: Handle Image Upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // File size check (Must be less than 800KB for Firestore)
+    if (file.size > 800 * 1024) {
+        alert("Image is too large! Please upload an image smaller than 800KB.");
+        return;
+    }
+
+    setUploadingImg(true);
+    const reader = new FileReader();
+    
+    reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        try {
+            // Save to Firestore
+            await setDoc(doc(db, "settings", "doctorProfile"), { image: base64String });
+            setDoctorImg(base64String); // Update UI
+            alert("Doctor profile image updated successfully! ✅");
+        } catch (error) {
+            console.error("Error saving image:", error);
+            alert("Failed to update image.");
+        } finally {
+            setUploadingImg(false);
+        }
+    };
+    reader.readAsDataURL(file);
   };
 
   const downloadDailyReport = () => {
@@ -163,14 +206,36 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-6 pt-25 pb-12">
       
         {/* Header Area */}
-        <div className="mb-10 flex justify-between items-end">
+        <div className="mb-10 flex flex-col md:flex-row justify-between items-end gap-6">
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Welcome, Doctor.</h1>
             <p className="text-slate-500 font-medium mt-1">Here's what's happening today.</p>
           </div>
-          <div className="text-right hidden md:block bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Date</p>
-            <p className="text-lg font-black text-slate-800">{new Date().toLocaleDateString()}</p>
+
+          <div className="flex items-center gap-4">
+             {/* 🔥 NEW: Profile Image Uploader Widget */}
+             <div className="bg-white px-2 py-2 pr-4 rounded-full border border-slate-200 shadow-sm flex items-center gap-3">
+                <div className="relative group w-12 h-12 rounded-full overflow-hidden border-2 border-slate-100">
+                    <img src={doctorImg} alt="Doctor" className="w-full h-full object-cover" />
+                    
+                    {/* Hover Overlay */}
+                    <label className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 cursor-pointer transition text-[10px] font-bold">
+                        {uploadingImg ? "..." : "Change"}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImg} />
+                    </label>
+                </div>
+                <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Profile Image</p>
+                    <p className="text-xs font-bold text-blue-600">
+                        {uploadingImg ? "Uploading..." : "Dr. Isuru"}
+                    </p>
+                </div>
+             </div>
+
+             <div className="text-right hidden md:block bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Date</p>
+                <p className="text-lg font-black text-slate-800">{new Date().toLocaleDateString()}</p>
+             </div>
           </div>
         </div>
 
@@ -281,7 +346,6 @@ export default function AdminDashboard() {
                         <option value="other">🔴 Other</option>
                     </select>
 
-                    {/* 🔥 3. Session Selection Dropdown */}
                     <select 
                         className="bg-white p-3 rounded-xl border-none text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer" 
                         value={holidaySession} 
@@ -315,7 +379,6 @@ export default function AdminDashboard() {
                                         <div>
                                             <p className="text-sm font-bold text-slate-800">{h.date}</p>
                                             
-                                            {/* 🔥 4. Display Session Info */}
                                             <div className="flex gap-2 text-[10px] font-bold uppercase mt-0.5">
                                                 <span className="text-slate-400">{h.type}</span>
                                                 {h.session === 'morning' && <span className="text-orange-500 bg-orange-50 px-1.5 rounded">☀️ Morning Off</span>}
@@ -359,30 +422,30 @@ export default function AdminDashboard() {
                                 
                                 {assignedStaff ? (
                                     <>
-                                        <span className="absolute top-3 right-3 w-2 h-2 bg-green-500 rounded-full"></span>
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 text-green-700 flex items-center justify-center font-black text-xl mb-3 shadow-inner">
-                                            {assignedStaff.name[0]}
-                                        </div>
-                                        <p className="text-xs font-bold text-slate-800">{assignedStaff.name}</p>
-                                        <p className="text-[10px] font-mono text-slate-400 mt-1">{assignedStaff.password}</p>
-                                        
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); handleRemoveStaff(slotCode); }} 
-                                            className="absolute -bottom-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition"
-                                            title="Remove Access"
-                                        >
-                                            🗑️
-                                        </button>
+                                            <span className="absolute top-3 right-3 w-2 h-2 bg-green-500 rounded-full"></span>
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 text-green-700 flex items-center justify-center font-black text-xl mb-3 shadow-inner">
+                                                {assignedStaff.name[0]}
+                                            </div>
+                                            <p className="text-xs font-bold text-slate-800">{assignedStaff.name}</p>
+                                            <p className="text-[10px] font-mono text-slate-400 mt-1">{assignedStaff.password}</p>
+                                            
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleRemoveStaff(slotCode); }} 
+                                                className="absolute -bottom-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 hover:scale-110 transition"
+                                                title="Remove Access"
+                                            >
+                                                🗑️
+                                            </button>
                                     </>
                                 ) : (
                                     <>
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-colors ${selectedSlot === slotCode ? 'bg-blue-200 text-blue-700' : 'bg-slate-200 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500'}`}>
-                                            <span className="text-3xl pb-1">+</span>
-                                        </div>
-                                        <span className={`text-xs font-bold uppercase tracking-wider ${selectedSlot === slotCode ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`}>
-                                            {slotCode}
-                                        </span>
-                                        <span className="text-[9px] text-slate-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to Add</span>
+                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-colors ${selectedSlot === slotCode ? 'bg-blue-200 text-blue-700' : 'bg-slate-200 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500'}`}>
+                                                <span className="text-3xl pb-1">+</span>
+                                            </div>
+                                            <span className={`text-xs font-bold uppercase tracking-wider ${selectedSlot === slotCode ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`}>
+                                                {slotCode}
+                                            </span>
+                                            <span className="text-[9px] text-slate-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to Add</span>
                                     </>
                                 )}
                             </div>

@@ -24,15 +24,16 @@ export default function PublicBooking() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // 🔥 1. Doctor Image State එක (Default එක: /doctor.jpeg)
+  const [doctorImg, setDoctorImg] = useState("/doctor.jpeg");
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [age, setAge] = useState("");  
   
-  // 🔥 වෙනස්කම 1: වේලාව මිනිත්තු වලින් ගණනය කිරීම (Logic Update)
+  // Time Logic
   const todayDateObj = new Date();
   const currentTotalMinutes = todayDateObj.getHours() * 60 + todayDateObj.getMinutes();
-  
-  // Evening cutoff is 8:30 PM (20:30) => 20 * 60 + 30 = 1230 minutes
   const isTodayAvailable = currentTotalMinutes < 1230; 
 
   const todayStr = todayDateObj.toISOString().split('T')[0];
@@ -50,7 +51,7 @@ export default function PublicBooking() {
 
   const dayPrefix = selectedDate === todayStr ? "අද" : "හෙට";
 
-  // AUTH CHECK
+  // AUTH CHECK & FETCH DOCTOR IMAGE
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -78,6 +79,27 @@ export default function PublicBooking() {
       }
       setLoadingUser(false);
     });
+
+    // 🔥 2. Fetch Doctor Image from Database
+    const fetchDoctorProfile = async () => {
+        try {
+            // "settings" collection එකේ "doctorProfile" කියන doc එකෙන් image එක ගන්නවා
+            const docRef = doc(db, "settings", "doctorProfile");
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Database එකේ image එකක් තියෙනවා නම් ඒක ගන්නවා, නැත්නම් පරණ එකම තියෙනවා
+                if (data.image) {
+                    setDoctorImg(data.image);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching doctor image:", error);
+        }
+    };
+    fetchDoctorProfile();
+
     return () => unsubscribe();
   }, []);
 
@@ -95,45 +117,27 @@ export default function PublicBooking() {
     }
   };
 
-  // SLOT GENERATION (Numbers Only)
+  // SLOT GENERATION
   const generateSlots = () => {
     const slots: Slot[] = [];
-    // Morning: 1-25
-    for (let i = 1; i <= 25; i++) {
-        slots.push({ number: i, session: "Morning" });
-    }
-    // Evening: 1-60
-    for (let i = 1; i <= 60; i++) {
-        slots.push({ number: i, session: "Evening" });
-    }
+    for (let i = 1; i <= 25; i++) slots.push({ number: i, session: "Morning" });
+    for (let i = 1; i <= 60; i++) slots.push({ number: i, session: "Evening" });
     return slots;
   };
 
   const allSlots = generateSlots();
 
-  // 🔥 වෙනස්කම 2: විනාඩි 30කට කලින් Slot ඉවත් කිරීමේ Logic එක
   const getVisibleSlots = () => {
     const now = new Date();
-    // දැන් වේලාව මිනිත්තු වලින්
     const curMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // Morning Cutoff: 7:30 AM (7 * 60 + 30 = 450 minutes)
     const morningCutoff = 450; 
-
-    // Evening Cutoff: 8:30 PM (20 * 60 + 30 = 1230 minutes)
     const eveningCutoff = 1230;
 
     return allSlots.filter(slot => {
-        // දවස "අද" නම් පමණක් වේලාව බලන්න
         if (selectedDate === todayStr) {
-            // උදේ Session එක 7:30 පහු වුනානම් පෙන්නන්න එපා
             if (slot.session === "Morning" && curMinutes >= morningCutoff) return false;
-            
-            // හවස Session එක 8:30 පහු වුනානම් පෙන්නන්න එපා
             if (slot.session === "Evening" && curMinutes >= eveningCutoff) return false;
         }
-
-        // Holiday Check
         if (holidayAlert) {
             if (holidayAlert.session === 'full') return false;
             if (holidayAlert.session === 'morning' && slot.session === "Morning") return false;
@@ -280,7 +284,8 @@ export default function PublicBooking() {
             <div className="absolute inset-0 bg-blue-400 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-500 -z-10"></div>
             <div className="relative bg-white border-2 border-blue-50 p-6 md:py-10 md:px-12 rounded-[2.5rem] shadow-xl shadow-blue-200/50 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10 text-center w-full">
                 <div className="w-24 h-24 md:w-36 md:h-36 rounded-full border-4 border-white overflow-hidden shadow-lg relative flex-shrink-0">
-                    <img src="/doctor.jpeg" alt="Dr. Isuru" className="object-cover w-full h-full" />
+                    {/* 🔥 3. Dynamic Image එක මෙතනට දැම්මා */}
+                    <img src={doctorImg} alt="Dr. Isuru" className="object-cover w-full h-full" />
                 </div>
                 <div>
                     <h3 className={`text-xl md:text-3xl font-bold text-blue-900 ${poppins.className}`}>Dr. Isuru Wickrama Arachchi</h3>
@@ -382,7 +387,7 @@ export default function PublicBooking() {
                                 return (
                                     <button key={slotKey} disabled={isBooked} onClick={() => setSelectedSlot(slot)}
                                         className={`relative py-3 px-1 rounded-xl text-sm font-bold border transition-all duration-200 flex flex-col items-center justify-center ${isBooked ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed decoration-slate-400' : isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg transform scale-105' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'}`}>
-                                        <span className="text-xl font-black"> {slot.number}</span>
+                                        <span className="text-xl font-black">{slot.number}</span>
                                         <span className={`text-[9px] uppercase mt-1 ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>{slot.session}</span>
                                         {isBooked && <span className="absolute inset-0 flex items-center justify-center text-[10px] bg-white/80 text-red-500 font-black rotate-12">BOOKED</span>}
                                     </button>
