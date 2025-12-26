@@ -13,12 +13,13 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Next.js වලදී App එක දෙපාරක් Initialize නොවී තියාගන්න මේ ක්‍රමය පාවිච්චි කරනවා.
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// 🔥 මේ කොටස් තමයි ඔබේ ෆයිල් එකේ අඩු වෙලා තිබුනේ
+// Services Initialize කිරීම
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app); 
+const storage = getStorage(app); // 🔥 Chat එකේ පින්තූර/Voice යවන්න මේක අත්‍යවශ්‍යයි.
 
-// 🔥 මේක නැතුව අනිත් පිටු වලට Database එක පේන්නේ නෑ
+// අනිත් පිටු වලට පාවිච්චි කරන්න Export කිරීම
 export { db, auth, storage };

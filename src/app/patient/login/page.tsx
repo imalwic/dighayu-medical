@@ -5,7 +5,6 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-// අලුතින් Icons import කරගත්තා
 import { FaEye, FaEyeSlash } from "react-icons/fa"; 
 
 export default function PatientLogin() {
@@ -15,7 +14,6 @@ export default function PatientLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Password පෙන්වන්න/සඟවන්න State එක
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -28,8 +26,16 @@ export default function PatientLogin() {
       // Login සාර්ථක නම් Home Page එකට යවනවා
       router.push("/"); 
     } catch (err: any) {
-      console.error(err);
-      setError("Invalid Email or Password");
+      console.error("Login Error:", err.code);
+      
+      // 🔥 Error එක ලස්සනට පෙන්නන කොටස
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+        setError("Email ලිපිනය හෝ මුරපදය වැරදියි. කරුණාකර පරීක්ෂා කරන්න.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("බොහෝ වාරයක් වැරදි Password ඇතුලත් කල නිසා ගිණුම තාවකාලිකව අත්හිටුවා ඇත. ටික වේලාවකින් උත්සාහ කරන්න.");
+      } else {
+        setError("Login වීමේ දෝෂයක්. කරුණාකර නැවත උත්සාහ කරන්න.");
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +47,12 @@ export default function PatientLogin() {
         <h2 className="text-2xl font-black text-blue-900 text-center mb-2">Welcome Back</h2>
         <p className="text-center text-slate-500 text-sm mb-6">Patient Login</p>
 
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-4 text-center">{error}</div>}
+        {/* 🔥 Error Message එක පෙන්වන තැන */}
+        {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold mb-4 text-center border border-red-200">
+                ⚠️ {error}
+            </div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           
@@ -62,7 +73,6 @@ export default function PatientLogin() {
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
             <div className="relative">
                 <input 
-                  // showPassword true නම් text, නැත්නම් password
                   type={showPassword ? "text" : "password"} 
                   className="w-full p-3 bg-slate-50 rounded-xl border outline-none focus:border-blue-500 text-slate-900 font-bold pr-10" 
                   value={password} 
@@ -70,7 +80,6 @@ export default function PatientLogin() {
                   required 
                 />
                 
-                {/* Eye Icon Button */}
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
