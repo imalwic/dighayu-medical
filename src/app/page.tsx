@@ -25,7 +25,7 @@ export default function PublicBooking() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // 🔥 1. Doctor Image State එක (Default එක: /doctor.jpeg)
-  const [doctorImg, setDoctorImg] = useState("/doctor.jpeg");
+  const [doctorImg, setDoctorImg] = useState("/dighayu.jpeg");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
