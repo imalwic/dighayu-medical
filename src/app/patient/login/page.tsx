@@ -5,6 +5,8 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+// අලුතින් Icons import කරගත්තා
+import { FaEye, FaEyeSlash } from "react-icons/fa"; 
 
 export default function PatientLogin() {
   const router = useRouter();
@@ -12,6 +14,9 @@ export default function PatientLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Password පෙන්වන්න/සඟවන්න State එක
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,15 +44,41 @@ export default function PatientLogin() {
         {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-4 text-center">{error}</div>}
 
         <form onSubmit={handleLogin} className="space-y-4">
+          
+          {/* Email Field */}
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-            <input type="email" className="w-full p-3 bg-slate-50 rounded-xl border outline-none focus:border-blue-500" 
-              value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input 
+              type="email" 
+              className="w-full p-3 bg-slate-50 rounded-xl border outline-none focus:border-blue-500 text-slate-900 font-bold" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+            />
           </div>
-          <div>
+
+          {/* Password Field with Eye Icon */}
+          <div className="relative">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-            <input type="password" className="w-full p-3 bg-slate-50 rounded-xl border outline-none focus:border-blue-500" 
-              value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div className="relative">
+                <input 
+                  // showPassword true නම් text, නැත්නම් password
+                  type={showPassword ? "text" : "password"} 
+                  className="w-full p-3 bg-slate-50 rounded-xl border outline-none focus:border-blue-500 text-slate-900 font-bold pr-10" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                />
+                
+                {/* Eye Icon Button */}
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3.5 text-slate-500 hover:text-blue-600"
+                >
+                  {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+                </button>
+            </div>
           </div>
 
           <button disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
