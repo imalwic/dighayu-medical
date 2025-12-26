@@ -7,7 +7,7 @@ import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs,
 import { onAuthStateChanged, signOut } from "firebase/auth"; 
 import { Noto_Sans_Sinhala, Poppins, Inter } from "next/font/google";
 import SeasonalEffects from "@/components/SeasonalEffects"; 
-import Footer from "@/components/Footer"; // 🔥 1. Footer එක Import කරගත්තා
+import Footer from "@/components/Footer"; 
 
 const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["400", "600", "700", "900"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700", "900"] });
@@ -15,11 +15,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 export default function PublicBooking() {
   const router = useRouter();  
-    type UserType = { uid?: string; name?: string; phone?: string; age?: string } | null;
-    type Slot = { number: number; time: string; session: string };
-    type HolidayAlert = { type?: string; session?: 'full' | 'morning' | 'evening'; message?: string } | null;
+  
+  // Types defined inline to match your previous code style
+  type UserType = { uid?: string; name?: string; phone?: string; age?: string } | null;
+  type Slot = { number: number; time: string; session: string };
+  type HolidayAlert = { type?: string; session?: 'full' | 'morning' | 'evening'; message?: string } | null;
 
-    const [currentUser, setCurrentUser] = useState<UserType>(null);
+  const [currentUser, setCurrentUser] = useState<UserType>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -36,13 +38,13 @@ export default function PublicBooking() {
   tomorrowDateObj.setDate(tomorrowDateObj.getDate() + 1);
   const tomorrowStr = tomorrowDateObj.toISOString().split('T')[0];
 
-    const [selectedDate, setSelectedDate] = useState<string>(isTodayAvailable ? todayStr : tomorrowStr);
+  const [selectedDate, setSelectedDate] = useState<string>(isTodayAvailable ? todayStr : tomorrowStr);
 
-    const [bookedKeys, setBookedKeys] = useState<string[]>([]);
-    const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [bookedKeys, setBookedKeys] = useState<string[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [loading, setLoading] = useState(false);
   
-    const [holidayAlert, setHolidayAlert] = useState<HolidayAlert>(null);
+  const [holidayAlert, setHolidayAlert] = useState<HolidayAlert>(null);
 
   const dayPrefix = selectedDate === todayStr ? "අද" : "හෙට";
 
@@ -83,24 +85,27 @@ export default function PublicBooking() {
     window.location.reload(); 
   };
 
+  // 🔥 1. CHAT SECURITY CHECK
   const handleChatClick = () => {
     if (currentUser) {
         router.push("/chat");
     } else {
+        // Alert එකක් පෙන්වා Login පිටුවට යවමු
+        alert("Chat පහසුකම භාවිතා කිරීමට කරුණාකර පළමුව Login වන්න.");
         router.push("/patient/login");
     }
   };
 
   // TIME SLOT GENERATION
-    const generateSlots = () => {
-        const slots: Slot[] = [];
-        const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const generateSlots = () => {
+    const slots: Slot[] = [];
+    const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     let mTime = new Date(`2000-01-01T06:30:00`);
     const mEnd = new Date(`2000-01-01T08:00:00`);
     let mCounter = 1;
-        while (mTime < mEnd) {
-            slots.push({ number: mCounter, time: formatTime(mTime), session: "Morning" });
+    while (mTime < mEnd) {
+      slots.push({ number: mCounter, time: formatTime(mTime), session: "Morning" });
       mTime.setMinutes(mTime.getMinutes() + 10);
       mCounter++;
     }
@@ -108,8 +113,8 @@ export default function PublicBooking() {
     let eTime = new Date(`2000-01-01T16:30:00`);
     const eEnd = new Date(`2000-01-01T21:00:00`);
     let eCounter = 1;
-        while (eTime < eEnd) {
-            slots.push({ number: eCounter, time: formatTime(eTime), session: "Evening" });
+    while (eTime < eEnd) {
+      slots.push({ number: eCounter, time: formatTime(eTime), session: "Evening" });
       eTime.setMinutes(eTime.getMinutes() + 10);
       eCounter++;
     }
@@ -150,7 +155,7 @@ export default function PublicBooking() {
     checkHoliday();
   }, [selectedDate, todayStr]); 
 
-    useEffect(() => {
+  useEffect(() => {
     if (!selectedDate) return;
     setSelectedSlot(null);
     const q = query(collection(db, "appointments"), where("date", "==", selectedDate));
@@ -159,27 +164,39 @@ export default function PublicBooking() {
           const data = doc.data();
           return `${data.session || 'Morning'}-${data.appointmentNumber}`;
       });
-            setBookedKeys(keys as string[]);
+      setBookedKeys(keys as string[]);
     });
     return () => unsubscribe();
   }, [selectedDate]);
 
-    const handleBook = async (e: React.FormEvent<HTMLFormElement>) => {
+  // 🔥 2. BOOKING SECURITY CHECK
+  const handleBook = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Log වී නැත්නම් Booking දැමීම නවත්වන්න
+    if (!currentUser) {
+        const confirmLogin = confirm("අංකයක් වෙන් කරවා ගැනීමට ඔබ පද්ධතියට ඇතුල් (Login) වී සිටිය යුතුය.\n\nදැන් Login වීමට කැමතිද?");
+        if (confirmLogin) {
+            router.push("/patient/login");
+        }
+        return; // Function එක මෙතැනින් නවතී
+    }
+
     if (!selectedSlot) return alert("Please select a time slot");
     if (!name || !phone || !age) return alert("Please fill all fields");
 
     setLoading(true);
     try {
-            await addDoc(collection(db, "appointments"), {
+      await addDoc(collection(db, "appointments"), {
         patientName: name, phone, age, date: selectedDate, 
-                appointmentNumber: selectedSlot.number, appointmentTime: selectedSlot.time,
-                session: selectedSlot.session, status: "pending", createdAt: serverTimestamp(),
-                userId: currentUser ? currentUser.uid : "guest"
+        appointmentNumber: selectedSlot.number, appointmentTime: selectedSlot.time,
+        session: selectedSlot.session, status: "pending", createdAt: serverTimestamp(),
+        userId: currentUser.uid // දැන් අනිවාර්යයෙන්ම User කෙනෙක් ඉන්නවා
       });
       alert(`Booking Confirmed! \n📅 ${selectedSlot.session} Session \n🔢 Number: ${selectedSlot.number} \n⏰ Time: ${selectedSlot.time}`);
       
-            if (!currentUser) { setName(""); setPhone(""); setAge(""); }
+      // currentUser ඉන්න නිසා fields හිස් කිරීම අනවශ්‍ය විය හැක, නමුත් ඊළඟ booking එකට පහසුවට තබමු
+      // if (!currentUser) { setName(""); setPhone(""); setAge(""); } 
       setSelectedSlot(null);
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -209,7 +226,7 @@ export default function PublicBooking() {
          {/* Right Side: Patient Auth Buttons */}
          <div className="flex gap-2 md:gap-3">
             
-            {/* 🔥 UPDATED CHAT BUTTON WITH NOTIFICATION 🔥 */}
+            {/* UPDATED CHAT BUTTON */}
             <button onClick={handleChatClick} className="relative flex items-center gap-2 bg-white/90 backdrop-blur-md border border-green-200 text-green-700 hover:bg-green-50 px-3 py-2 md:px-5 md:py-2.5 rounded-full text-[10px] md:text-xs font-bold shadow-md transition-all active:scale-95">
                 <span className="text-sm md:text-lg">💬</span> 
                 <span className="hidden md:inline">Chat</span>
@@ -426,7 +443,6 @@ export default function PublicBooking() {
 
       </div>
 
-      {/* 🔥 2. Footer Component එක මෙතැනට දැම්මා 🔥 */}
       <Footer />
 
     </div>
