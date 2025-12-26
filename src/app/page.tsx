@@ -16,7 +16,6 @@ const inter = Inter({ subsets: ["latin"] });
 export default function PublicBooking() {
   const router = useRouter();  
   
-  // Types defined inline to match your previous code style
   type UserType = { uid?: string; name?: string; phone?: string; age?: string } | null;
   type Slot = { number: number; time: string; session: string };
   type HolidayAlert = { type?: string; session?: 'full' | 'morning' | 'evening'; message?: string } | null;
@@ -48,7 +47,7 @@ export default function PublicBooking() {
 
   const dayPrefix = selectedDate === todayStr ? "අද" : "හෙට";
 
-  // AUTH CHECK & AUTO FILL & NOTIFICATIONS
+  // AUTH CHECK
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -56,6 +55,7 @@ export default function PublicBooking() {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           setCurrentUser(userData);
+          // Auto-fill form if logged in
           setName(userData.name || "");
           setPhone(userData.phone || "");
           setAge(userData.age || "");
@@ -65,13 +65,13 @@ export default function PublicBooking() {
             where("receiverId", "==", user.uid),
             where("read", "==", false)
           );
-
           onSnapshot(msgQuery, (snapshot) => {
              setUnreadCount(snapshot.size);
           });
         }
       } else {
         setCurrentUser(null);
+        // Clear form if logged out
         setName(""); setPhone(""); setAge("");
         setUnreadCount(0);
       }
@@ -85,18 +85,17 @@ export default function PublicBooking() {
     window.location.reload(); 
   };
 
-  // 🔥 1. CHAT SECURITY CHECK
+  // 1. CHAT SECURITY CHECK
   const handleChatClick = () => {
     if (currentUser) {
         router.push("/chat");
     } else {
-        // Alert එකක් පෙන්වා Login පිටුවට යවමු
         alert("Chat පහසුකම භාවිතා කිරීමට කරුණාකර පළමුව Login වන්න.");
         router.push("/patient/login");
     }
   };
 
-  // TIME SLOT GENERATION
+  // SLOT GENERATION
   const generateSlots = () => {
     const slots: Slot[] = [];
     const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -169,36 +168,40 @@ export default function PublicBooking() {
     return () => unsubscribe();
   }, [selectedDate]);
 
-  // 🔥 2. BOOKING SECURITY CHECK
+  // 🔥 2. BOOKING SECURITY CHECK (UPDATED)
   const handleBook = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Log වී නැත්නම් Booking දැමීම නවත්වන්න
+    // STEP 1: Check if User is Logged In
     if (!currentUser) {
-        const confirmLogin = confirm("අංකයක් වෙන් කරවා ගැනීමට ඔබ පද්ධතියට ඇතුල් (Login) වී සිටිය යුතුය.\n\nදැන් Login වීමට කැමතිද?");
-        if (confirmLogin) {
-            router.push("/patient/login");
-        }
-        return; // Function එක මෙතැනින් නවතී
+        alert("කරුණාකර අංකයක් වෙන් කරගැනීමට පළමුව Login වන්න (Please login first).");
+        router.push("/patient/login");
+        return; // ⛔ මෙතැනින් නවතී. පහලට යන්නේ නෑ.
     }
 
+    // STEP 2: Validate Inputs
     if (!selectedSlot) return alert("Please select a time slot");
     if (!name || !phone || !age) return alert("Please fill all fields");
 
     setLoading(true);
     try {
+      // STEP 3: Add Booking (Only if currentUser exists)
       await addDoc(collection(db, "appointments"), {
         patientName: name, phone, age, date: selectedDate, 
         appointmentNumber: selectedSlot.number, appointmentTime: selectedSlot.time,
         session: selectedSlot.session, status: "pending", createdAt: serverTimestamp(),
-        userId: currentUser.uid // දැන් අනිවාර්යයෙන්ම User කෙනෙක් ඉන්නවා
+        userId: currentUser.uid // 🔥 Guest අයින් කළා. අනිවාර්යයෙන් User ID එක ඕන.
       });
+
       alert(`Booking Confirmed! \n📅 ${selectedSlot.session} Session \n🔢 Number: ${selectedSlot.number} \n⏰ Time: ${selectedSlot.time}`);
-      
-      // currentUser ඉන්න නිසා fields හිස් කිරීම අනවශ්‍ය විය හැක, නමුත් ඊළඟ booking එකට පහසුවට තබමු
-      // if (!currentUser) { setName(""); setPhone(""); setAge(""); } 
       setSelectedSlot(null);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+      
+    } catch (error) { 
+        console.error(error); 
+        alert("Booking failed. Please try again.");
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const services = [
@@ -213,25 +216,19 @@ export default function PublicBooking() {
       
       <SeasonalEffects />
 
-      {/* 🔥 TOP NAV BAR 🔥 */}
+      {/* TOP NAV BAR */}
       <div className="absolute top-0 left-0 w-full p-4 md:p-6 z-[1000] flex justify-between items-center">
          
-         {/* Left Side: Staff Login */}
          <div>
             <button onClick={() => router.push("/login")} className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-slate-200 text-slate-500 hover:text-blue-600 px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-sm transition-all hover:bg-white">
                 🔒 Staff Login
             </button>
          </div>
 
-         {/* Right Side: Patient Auth Buttons */}
          <div className="flex gap-2 md:gap-3">
-            
-            {/* UPDATED CHAT BUTTON */}
             <button onClick={handleChatClick} className="relative flex items-center gap-2 bg-white/90 backdrop-blur-md border border-green-200 text-green-700 hover:bg-green-50 px-3 py-2 md:px-5 md:py-2.5 rounded-full text-[10px] md:text-xs font-bold shadow-md transition-all active:scale-95">
                 <span className="text-sm md:text-lg">💬</span> 
                 <span className="hidden md:inline">Chat</span>
-                
-                {/* Notification Badge */}
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 md:top-0 md:right-0 bg-red-600 text-white text-[9px] md:text-[10px] font-black w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full animate-pulse shadow-sm ring-2 ring-white">
                         {unreadCount}
@@ -413,7 +410,7 @@ export default function PublicBooking() {
             </form>
         </div>
 
-        {/* 3. OPENING HOURS CARD */}
+        {/* OPENING HOURS CARD */}
         <div className="lg:col-span-5 bg-blue-900 rounded-3xl p-6 md:p-8 shadow-xl text-white relative overflow-hidden order-3">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20"></div>
             <h3 className={`text-lg font-bold mb-6 border-b border-blue-700 pb-4 ${notoSinhala.className}`}>⏰ විවෘත වේලාවන්</h3>
