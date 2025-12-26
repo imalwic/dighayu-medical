@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase'; 
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, runTransaction, serverTimestamp, addDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable'; // 🔥 1. නිවැරදි Import එක
 import AdminNavbar from "@/components/Navbar"; 
 
 // --- Types ---
@@ -166,6 +166,7 @@ export default function BillingPage() {
     setCart(cart.filter((c) => c.id !== id));
   };
 
+  // 🔥 2. Updated PDF Generation Function
   const handleDownloadAndPay = () => {
     if (cart.length === 0 && doctorCharge === 0) return alert("Bill is empty!");
     
@@ -197,7 +198,8 @@ export default function BillingPage() {
         tableRows.push(["Professional Charges", "-", "-", "-", doctorCharge.toFixed(2)]);
     }
 
-    (pdf as any).autoTable({
+    // 🔥 3. autoTable භාවිතා කරන නිවැරදි ක්‍රමය
+    autoTable(pdf, {
         head: [["Item", "Instructions", "Price", "Qty", "Amount"]],
         body: tableRows,
         startY: 55,
@@ -210,21 +212,17 @@ export default function BillingPage() {
     setShowPayment(true);
   };
 
-  // 🔥🔥🔥 CORRECTED TRANSACTION FUNCTION 🔥🔥🔥
   const finishTransaction = async () => {
     try {
         await runTransaction(db, async (transaction) => {
-            // Phase 1: READ ALL (සියලුම ඩේටා කියවීම)
             const reads = [];
             for (const item of cart) {
                 const refId = item.id;
                 const medRef = doc(db, "medicines", refId);
-                // අපි මෙතනදිම get එක කරනවා
                 const docSnap = await transaction.get(medRef);
                 reads.push({ docSnap, medRef, item });
             }
 
-            // Phase 2: WRITE ALL (සියලුම ඩේටා ලිවීම)
             for (const read of reads) {
                 if (!read.docSnap.exists()) {
                     throw new Error(`Document does not exist for: ${read.item.name}`);
@@ -237,12 +235,10 @@ export default function BillingPage() {
                     throw new Error(`Insufficient stock for: ${read.item.name}. Available: ${currentQty}`);
                 }
 
-                // දැන් යාවත්කාලීන කරන්න
                 transaction.update(read.medRef, { quantity: newQty });
             }
         });
 
-        // Transaction Success - Now Save Order
         const orderData = {
             items: cart, doctorCharge, totalAmount: total, createdAt: serverTimestamp(), status: "completed",
             type: selectedOrder ? "prescription" : "manual_sale",

@@ -21,6 +21,10 @@ export default function AdminDashboard() {
   const [pendingCount, setPendingCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
 
+  // 🔥 NEW: Low Stock Modal Logic
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+
   // Holidays
   const [holidayDate, setHolidayDate] = useState("");
   const [holidayType, setHolidayType] = useState("poya"); 
@@ -33,8 +37,8 @@ export default function AdminDashboard() {
   const [newStaffPassword, setNewStaffPassword] = useState("");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
-  // 🔥 NEW: Doctor Profile Image State
-  const [doctorImg, setDoctorImg] = useState("/doctor.jpeg"); // Default Image
+  // Doctor Profile Image
+  const [doctorImg, setDoctorImg] = useState("/doctor.jpeg"); 
   const [uploadingImg, setUploadingImg] = useState(false);
 
   // 1. Security Check
@@ -78,11 +82,19 @@ export default function AdminDashboard() {
     const qAppt = query(collection(db, "appointments"), where("status", "==", "pending"));
     const unsubAppt = onSnapshot(qAppt, (snap) => setPendingCount(snap.size));
     
-    // Low Stock
+    // 🔥 Low Stock Check Logic (< 30)
     const checkStock = async () => {
-        const snap = await getDocs(collection(db, "medicines"));
-        const lowCount = snap.docs.filter(doc => (doc.data().quantity || 0) < 10).length;
-        setLowStockCount(lowCount);
+        const qStock = collection(db, "medicines");
+        // Real-time listener for stock
+        const unsubStock = onSnapshot(qStock, (snapshot) => {
+            const lowItems = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as any))
+                .filter(item => (item.quantity || 0) < 30); // Filter items less than 30
+            
+            setLowStockCount(lowItems.length);
+            setLowStockItems(lowItems);
+        });
+        return () => unsubStock();
     };
     checkStock();
     
@@ -95,7 +107,7 @@ export default function AdminDashboard() {
         setStaffList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    // 🔥 NEW: Fetch Current Doctor Image
+    // Fetch Current Doctor Image
     const fetchDoctorImg = async () => {
         const docRef = doc(db, "settings", "doctorProfile");
         const docSnap = await getDoc(docRef);
@@ -140,12 +152,10 @@ export default function AdminDashboard() {
     alert("Removed");
   };
 
-  // 🔥 NEW: Handle Image Upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // File size check (Must be less than 800KB for Firestore)
     if (file.size > 800 * 1024) {
         alert("Image is too large! Please upload an image smaller than 800KB.");
         return;
@@ -157,9 +167,8 @@ export default function AdminDashboard() {
     reader.onloadend = async () => {
         const base64String = reader.result as string;
         try {
-            // Save to Firestore
             await setDoc(doc(db, "settings", "doctorProfile"), { image: base64String });
-            setDoctorImg(base64String); // Update UI
+            setDoctorImg(base64String); 
             alert("Doctor profile image updated successfully! ✅");
         } catch (error) {
             console.error("Error saving image:", error);
@@ -203,6 +212,60 @@ export default function AdminDashboard() {
       
       <AdminNavbar />
 
+      {/* 🔥 NEW: Low Stock Modal */}
+      {showLowStockModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-fade-in">
+                {/* Header */}
+                <div className="bg-red-50 p-6 flex justify-between items-center border-b border-red-100">
+                    <h3 className="text-xl font-black text-red-600 flex items-center gap-2">
+                        ⚠️ Low Stock Alert
+                    </h3>
+                    <button onClick={() => setShowLowStockModal(false)} className="bg-white text-slate-400 hover:text-red-500 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow-sm transition">✕</button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    {lowStockItems.length === 0 ? (
+                        <div className="text-center py-10">
+                            <span className="text-6xl mb-4 block">✅</span>
+                            <h3 className="text-lg font-bold text-slate-700">All Good!</h3>
+                            <p className="text-sm text-slate-500 mt-1">Stock levels are sufficient.</p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                                    <th className="p-3 rounded-l-lg">Item Name</th>
+                                    <th className="p-3 text-right rounded-r-lg">Current Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {lowStockItems.map((item, idx) => (
+                                    <tr key={idx} className="border-b border-slate-50 last:border-none">
+                                        <td className="p-3 font-bold text-slate-800">{item.name}</td>
+                                        <td className="p-3 text-right">
+                                            <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold">
+                                                {item.quantity}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="bg-slate-50 p-4 border-t border-slate-100 text-center">
+                    <Link href="/inventory" className="text-blue-600 font-bold text-sm hover:underline">
+                        Go to Inventory →
+                    </Link>
+                </div>
+            </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-6 pt-25 pb-12">
       
         {/* Header Area */}
@@ -213,12 +276,9 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-             {/* 🔥 NEW: Profile Image Uploader Widget */}
              <div className="bg-white px-2 py-2 pr-4 rounded-full border border-slate-200 shadow-sm flex items-center gap-3">
                 <div className="relative group w-12 h-12 rounded-full overflow-hidden border-2 border-slate-100">
                     <img src={doctorImg} alt="Doctor" className="w-full h-full object-cover" />
-                    
-                    {/* Hover Overlay */}
                     <label className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 cursor-pointer transition text-[10px] font-bold">
                         {uploadingImg ? "..." : "Change"}
                         <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImg} />
@@ -283,8 +343,8 @@ export default function AdminDashboard() {
                 </div>
             </Link>
 
-            {/* Stock Alert Card */}
-            <Link href="/inventory" className="bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            {/* 🔥 UPDATED: Stock Alert Card (Now Clickable with Modal) */}
+            <div onClick={() => setShowLowStockModal(true)} className="bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-red-100"></div>
                 <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-3">
@@ -292,9 +352,9 @@ export default function AdminDashboard() {
                         <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Low Stock</h3>
                     </div>
                     <p className="text-3xl font-black text-slate-900">{lowStockCount}</p>
-                    <p className="text-xs text-red-500 mt-2 font-bold">Items need re-order</p>
+                    <p className="text-xs text-red-500 mt-2 font-bold">Click to view items</p>
                 </div>
-            </Link>
+            </div>
         </div>
 
         {/* --- 2. QUICK ACCESS BUTTONS --- */}
