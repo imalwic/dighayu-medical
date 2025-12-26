@@ -1,16 +1,15 @@
+// components/Footer.tsx
 import React from 'react';
 import { FaMapMarkerAlt, FaPhoneAlt, FaWhatsapp, FaFacebook, FaTiktok, FaInstagram } from 'react-icons/fa';
 
 const Footer = () => {
   return (
-    <footer className="bg-[#0f172a] text-white py-6 mt-8">
+    <footer className="bg-[#0f172a] text-white py-6 mt-auto">
       
       {/* Main Container */}
-      {/* වෙනස්කම 1: text-center අයින් කළා, items-start දැම්මා */}
       <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-4 text-left items-start">
         
         {/* 1. Location Section */}
-        {/* Phone එකේදි වම් පැත්තට (items-start), PC එකේදිත් වම් පැත්තටමයි */}
         <div className="flex flex-col items-start md:items-start">
           <h3 className="text-sm font-bold text-blue-400 mb-1 uppercase tracking-wider">Location</h3>
           <div className="flex items-start gap-2 text-gray-300 text-xs md:text-sm">
@@ -23,7 +22,6 @@ const Footer = () => {
         </div>
 
         {/* 2. Contact Section */}
-        {/* වෙනස්කම 2: Phone එකේදි වම් පැත්තට (items-start), PC එකේදි මැදට (md:items-center) */}
         <div className="flex flex-col items-start md:items-center">
           <h3 className="text-sm font-bold text-blue-400 mb-1 uppercase tracking-wider">Contact Us</h3>
           
@@ -43,7 +41,6 @@ const Footer = () => {
         </div>
 
         {/* 3. Social Media Section */}
-        {/* වෙනස්කම 3: Phone එකේදි වම් පැත්තට (items-start), PC එකේදි දකුණට (md:items-end) */}
         <div className="flex flex-col items-start md:items-end">
           <h3 className="text-sm font-bold text-blue-400 mb-1 uppercase tracking-wider">Follow Us</h3>
           <p className="text-gray-400 text-[10px] md:text-xs mb-2">Find Out Our Latest Information</p>
@@ -53,7 +50,7 @@ const Footer = () => {
               <FaFacebook size={16} />
             </a>
             
-            <a href="https://instragram.com" target="_blank" rel="noopener noreferrer" className="bg-white p-1.5 rounded-full text-black hover:bg-black hover:text-white transition duration-300">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="bg-white p-1.5 rounded-full text-black hover:bg-black hover:text-white transition duration-300">
               <FaInstagram size={16} />
             </a>
           </div>

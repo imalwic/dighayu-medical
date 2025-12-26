@@ -1,119 +1,168 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { Noto_Sans_Sinhala, Poppins } from "next/font/google";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { Poppins, Noto_Sans_Sinhala } from "next/font/google";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"] });
-const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["700"] });
+const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["400", "700"] });
 
 export default function LoginPage() {
   const router = useRouter();
-  const [userCode, setUserCode] = useState(""); // A0000 or S0001
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"admin" | "staff">("admin"); // Toggle Login Mode
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // Form States
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [staffName, setStaffName] = useState("");
+  const [staffCode, setStaffCode] = useState("");
+
+  // 🔥 1. HANDLE ADMIN LOGIN (Firebase)
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
-
-    const code = userCode.toUpperCase().trim(); // S0001
-    const pass = password.trim();
-
     try {
-        // 1. Check if it is the Doctor (Admin)
-        if (code === "A0000") {
-            // Admin password එක මෙතන Hardcode කරන්න පුළුවන් ආරක්ෂාවට, නැත්නම් Firebase එකෙන් check කරන්නත් පුළුවන්.
-            // දැනට අපි Admin Password එක 'admin123' කියල හිතමු (ඔබට මෙය වෙනස් කළ හැක).
-            if (pass === "admin123") {
-                sessionStorage.setItem("userRole", "admin");
-                router.push("/admin"); // Go to Admin Dashboard
-            } else {
-                setError("Invalid Admin Password");
-            }
-        } 
-        // 2. Check if it is a Staff Member (S0001 - S0003)
-        else if (code.startsWith("S")) {
-            // Check Firestore 'staff_access' collection
-            const staffDoc = await getDoc(doc(db, "staff_access", code));
-            
-            if (staffDoc.exists()) {
-                const staffData = staffDoc.data();
-                if (staffData.password === pass) {
-                    sessionStorage.setItem("userRole", "staff");
-                    router.push("/billing"); // Staff goes to Billing
-                } else {
-                    setError("Incorrect Password");
-                }
-            } else {
-                setError("Access Denied. Contact Doctor.");
-            }
-        } 
-        else {
-            setError("Invalid User Code. Use A0000 or S0001-3");
-        }
-
+      await signInWithEmailAndPassword(auth, email, password);
+      // Success -> Go to Dashboard
+      router.push("/admin"); 
     } catch (err) {
-        console.error(err);
-        setError("Login Failed. Try again.");
-    } finally {
-        setLoading(false);
+      alert("Login Failed: Incorrect Email or Password");
     }
+    setLoading(false);
+  };
+
+  // 🔥 2. HANDLE STAFF LOGIN (Firestore Check)
+  const handleStaffLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      // Check if Name & Code matches any document in 'staff_access' collection
+      const q = query(
+        collection(db, "staff_access"),
+        where("name", "==", staffName),
+        where("password", "==", staffCode)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Success -> Save to LocalStorage & Go to Dashboard
+        const staffData = querySnapshot.docs[0].data();
+        localStorage.setItem("staffUser", JSON.stringify(staffData));
+        router.push("/admin");
+      } else {
+        alert("Access Denied: Invalid Name or Code");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error checking staff access");
+    }
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full blur-[100px] opacity-20"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-red-600 rounded-full blur-[100px] opacity-20"></div>
-
-      <div className={`bg-white/10 backdrop-blur-lg border border-white/10 p-10 rounded-3xl shadow-2xl w-full max-w-md relative z-10 ${poppins.className}`}>
+    <div className={`min-h-screen bg-slate-100 flex items-center justify-center p-4 ${poppins.className}`}>
+      
+      <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200">
         
+        {/* Logo Area */}
         <div className="text-center mb-8">
-            <h1 className={`text-4xl font-black text-white mb-2 ${notoSinhala.className}`}>දීඝායු</h1>
-            <p className="text-slate-300 text-xs uppercase tracking-[0.3em] font-bold">Internal System Login</p>
+          <h1 className={`text-3xl font-black text-slate-900 ${notoSinhala.className}`}>දීඝායු</h1>
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mt-1">Medical Center</p>
+          <p className="text-slate-400 text-xs mt-4 font-medium">System Access Portal</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        {/* Toggle Switch */}
+        <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+          <button 
+            onClick={() => setMode("admin")}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === "admin" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            Doctor (Admin)
+          </button>
+          <button 
+            onClick={() => setMode("staff")}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === "staff" ? "bg-green-600 text-white shadow-md" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            Staff Member
+          </button>
+        </div>
+
+        {/* --- ADMIN LOGIN FORM --- */}
+        {mode === "admin" && (
+          <form onSubmit={handleAdminLogin} className="space-y-4 animate-fade-in">
             <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">User Code</label>
-                <input 
-                    type="text" 
-                    placeholder="E.g. A0000 or S0001" 
-                    className="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-4 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition font-bold tracking-wider placeholder:font-normal placeholder:text-slate-600"
-                    value={userCode}
-                    onChange={(e) => setUserCode(e.target.value)}
-                />
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Email</label>
+              <input 
+                type="email" 
+                required 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition text-sm font-bold text-slate-800"
+                placeholder="doctor@dighayu.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-
             <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Password</label>
-                <input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    className="w-full bg-slate-800/50 border border-slate-700 text-white rounded-xl px-4 py-4 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Password</label>
+              <input 
+                type="password" 
+                required 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition text-sm font-bold text-slate-800"
+                placeholder="admin123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-
-            {error && <p className="text-red-500 text-sm font-bold text-center bg-red-500/10 py-2 rounded-lg">{error}</p>}
-
             <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-50"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition active:scale-95 disabled:opacity-50 mt-2"
             >
-                {loading ? "Verifying..." : "Access System ➔"}
+              {loading ? "Checking..." : "Login as Doctor"}
             </button>
-        </form>
+          </form>
+        )}
 
-        <div className="mt-8 text-center border-t border-white/10 pt-6">
-            <p className="text-xs text-slate-500">Restricted Access. Authorized Personnel Only.</p>
+        {/* --- STAFF LOGIN FORM --- */}
+        {mode === "staff" && (
+          <form onSubmit={handleStaffLogin} className="space-y-4 animate-fade-in">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Your Name</label>
+              <input 
+                type="text" 
+                required 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-green-500 focus:bg-white transition text-sm font-bold text-slate-800"
+                placeholder="Ex: Nimal"
+                value={staffName}
+                onChange={(e) => setStaffName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Pass Code</label>
+              <input 
+                type="password" 
+                required 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-green-500 focus:bg-white transition text-sm font-bold text-slate-800"
+                placeholder="Ex: 1234"
+                value={staffCode}
+                onChange={(e) => setStaffCode(e.target.value)}
+              />
+            </div>
+            <button 
+              disabled={loading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 transition active:scale-95 disabled:opacity-50 mt-2"
+            >
+              {loading ? "Verifying..." : "Login as Staff"}
+            </button>
+          </form>
+        )}
+
+        <div className="mt-8 text-center">
+            <button onClick={() => router.push('/')} className="text-xs font-bold text-slate-400 hover:text-slate-600">
+                ← Back to Patient Portal
+            </button>
         </div>
 
       </div>

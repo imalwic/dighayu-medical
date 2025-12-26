@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Noto_Sans_Sinhala, Poppins } from "next/font/google";
+import { useState, useEffect } from "react";
+import { auth } from "@/lib/firebase"; // Auth import
+import { signOut, onAuthStateChanged } from "firebase/auth"; // Auth functions
 
 const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["700", "900"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
@@ -10,6 +13,42 @@ const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+
+  // User States
+  const [userRole, setUserRole] = useState<"admin" | "staff" | null>(null);
+  const [userName, setUserName] = useState("");
+
+  // 1. Check Auth & Set Role
+  useEffect(() => {
+    // A. Check for Staff in LocalStorage first
+    const staffData = localStorage.getItem("staffUser");
+    if (staffData) {
+      try {
+        const staff = JSON.parse(staffData);
+        setUserRole("staff");
+        setUserName(staff.name || "Staff Member");
+      } catch (e) { console.error(e); }
+    }
+
+    // B. Check Firebase (Admin) - Overrides staff if logged in
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserRole("admin");
+        setUserName("Dr. Isuru");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Handle Logout
+  const handleLogout = async () => {
+    if (userRole === "admin") {
+      await signOut(auth);
+    } else {
+      localStorage.removeItem("staffUser");
+    }
+    router.push("/login"); // Redirect to Login
+  };
 
   // Hide navbar on Home, Login, and Chat pages
   if (pathname === "/" || pathname === "/login" || pathname?.startsWith("/book") || pathname?.startsWith("/chat")) {
@@ -23,7 +62,7 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 w-full bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 z-50 h-20 px-6 flex items-center justify-between shadow-xl shadow-slate-900/20">
       
-      {/* LEFT SIDE: Stylized Medical Logo */}
+      {/* LEFT SIDE: Stylized Medical Logo (UNCHANGED) */}
       <Link href="/admin" className="flex items-center gap-4 group">
         <div className="relative w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-white to-slate-100 shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-white/10 group-hover:scale-105 transition duration-300 overflow-hidden flex-shrink-0">
             <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8">
@@ -51,8 +90,10 @@ export default function Navbar() {
       {/* RIGHT SIDE: Navigation Links + User Profile */}
       <div className="flex items-center gap-8">
         
-        {/* 🔥 NAVIGATION LINKS (Added Messages) 🔥 */}
+        {/* 🔥 NAVIGATION LINKS (Role Based) */}
         <div className={`hidden md:flex items-center gap-3 ${poppins.className}`}>
+            
+            {/* Common Links (Admin & Staff) */}
             <Link href="/admin" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isActive("/admin")}`}>
                 Dashboard
             </Link>
@@ -62,24 +103,34 @@ export default function Navbar() {
             <Link href="/billing" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isActive("/billing")}`}>
                 Billing
             </Link>
-            <Link href="/sales" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isActive("/sales")}`}>
-                Reports
-            </Link>
-            {/* NEW MESSAGE LINK */}
-            <Link href="/admin/messages" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${isActive("/admin/messages")}`}>
-                Messages 💬
-            </Link>
+
+            {/* 🔥 Admin Only Links */}
+            {userRole === 'admin' && (
+                <>
+                    <Link href="/sales" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${isActive("/sales")}`}>
+                        Reports
+                    </Link>
+                    <Link href="/admin/messages" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${isActive("/admin/messages")}`}>
+                        Messages 💬
+                    </Link>
+                </>
+            )}
         </div>
 
         <div className="h-8 w-[1px] bg-slate-700/50 hidden md:block"></div>
 
+        {/* User Profile & Logout */}
         <div className="flex items-center gap-4">
             <div className="hidden md:block text-right">
-                <p className="text-xs font-bold text-slate-200">Dr. Isuru</p>
-                <p className="text-[11px] font-semibold text-blue-400">Admin</p>
+                {/* Dynamic Name */}
+                <p className="text-xs font-bold text-slate-200">{userName || "User"}</p>
+                {/* Dynamic Role Label */}
+                <p className={`text-[11px] font-semibold uppercase tracking-wide ${userRole === 'admin' ? 'text-blue-400' : 'text-green-400'}`}>
+                    {userRole === 'admin' ? 'Admin' : 'Staff Member'}
+                </p>
             </div>
             <button 
-                onClick={() => router.push("/login")}
+                onClick={handleLogout}
                 className="bg-slate-800/80 text-slate-300 hover:bg-red-600 hover:text-white px-5 py-2 rounded-lg text-sm font-bold transition-all border border-slate-700 hover:border-red-500 shadow-sm"
             >
                 Logout
