@@ -382,7 +382,7 @@ export default function PublicBooking() {
                                 return (
                                     <button key={slotKey} disabled={isBooked} onClick={() => setSelectedSlot(slot)}
                                         className={`relative py-3 px-1 rounded-xl text-sm font-bold border transition-all duration-200 flex flex-col items-center justify-center ${isBooked ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed decoration-slate-400' : isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg transform scale-105' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'}`}>
-                                        <span className="text-xl font-black">No. {slot.number}</span>
+                                        <span className="text-xl font-black"> {slot.number}</span>
                                         <span className={`text-[9px] uppercase mt-1 ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>{slot.session}</span>
                                         {isBooked && <span className="absolute inset-0 flex items-center justify-center text-[10px] bg-white/80 text-red-500 font-black rotate-12">BOOKED</span>}
                                     </button>
