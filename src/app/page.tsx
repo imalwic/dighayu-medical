@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp, query, where, onSnapshot, getDocs,
 import { onAuthStateChanged, signOut } from "firebase/auth"; 
 import { Noto_Sans_Sinhala, Poppins, Inter } from "next/font/google";
 import SeasonalEffects from "@/components/SeasonalEffects"; 
+import Footer from "@/components/Footer"; // 🔥 1. Footer එක Import කරගත්තා
 
 const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["400", "600", "700", "900"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700", "900"] });
@@ -14,10 +15,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 export default function PublicBooking() {
   const router = useRouter();  
-  
-  const [currentUser, setCurrentUser] = useState<any>(null); 
+    type UserType = { uid?: string; name?: string; phone?: string; age?: string } | null;
+    type Slot = { number: number; time: string; session: string };
+    type HolidayAlert = { type?: string; session?: 'full' | 'morning' | 'evening'; message?: string } | null;
+
+    const [currentUser, setCurrentUser] = useState<UserType>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0); // 🔥 New: Unread Messages Count
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -32,13 +36,13 @@ export default function PublicBooking() {
   tomorrowDateObj.setDate(tomorrowDateObj.getDate() + 1);
   const tomorrowStr = tomorrowDateObj.toISOString().split('T')[0];
 
-  const [selectedDate, setSelectedDate] = useState(isTodayAvailable ? todayStr : tomorrowStr); 
-  
-  const [bookedKeys, setBookedKeys] = useState<string[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<{number: number, time: string, session: string} | null>(null);
+    const [selectedDate, setSelectedDate] = useState<string>(isTodayAvailable ? todayStr : tomorrowStr);
+
+    const [bookedKeys, setBookedKeys] = useState<string[]>([]);
+    const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [loading, setLoading] = useState(false);
   
-  const [holidayAlert, setHolidayAlert] = useState<{type: string, message: string, session: string} | null>(null);
+    const [holidayAlert, setHolidayAlert] = useState<HolidayAlert>(null);
 
   const dayPrefix = selectedDate === todayStr ? "අද" : "හෙට";
 
@@ -54,15 +58,14 @@ export default function PublicBooking() {
           setPhone(userData.phone || "");
           setAge(userData.age || "");
 
-          // 🔥 LISTEN FOR UNREAD MESSAGES (Real-time)
           const msgQuery = query(
             collection(db, "messages"),
-            where("receiverId", "==", user.uid), // මට එවපු ඒවා (User is receiver)
-            where("read", "==", false) // කියවලා නැති ඒවා
+            where("receiverId", "==", user.uid),
+            where("read", "==", false)
           );
 
           onSnapshot(msgQuery, (snapshot) => {
-             setUnreadCount(snapshot.size); // ගණන update කිරීම
+             setUnreadCount(snapshot.size);
           });
         }
       } else {
@@ -80,25 +83,24 @@ export default function PublicBooking() {
     window.location.reload(); 
   };
 
-  // 🔥 Click Chat Button Logic
   const handleChatClick = () => {
     if (currentUser) {
-        router.push("/chat"); // Log වෙලා නම් කෙලින්ම Chat එකට
+        router.push("/chat");
     } else {
-        router.push("/patient/login"); // නැත්නම් Login වෙන්න කියනවා
+        router.push("/patient/login");
     }
   };
 
   // TIME SLOT GENERATION
-  const generateSlots = () => {
-    const slots = [];
-    const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const generateSlots = () => {
+        const slots: Slot[] = [];
+        const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     let mTime = new Date(`2000-01-01T06:30:00`);
     const mEnd = new Date(`2000-01-01T08:00:00`);
     let mCounter = 1;
-    while (mTime < mEnd) {
-      slots.push({ number: mCounter, time: formatTime(mTime), session: "Morning" });
+        while (mTime < mEnd) {
+            slots.push({ number: mCounter, time: formatTime(mTime), session: "Morning" });
       mTime.setMinutes(mTime.getMinutes() + 10);
       mCounter++;
     }
@@ -106,8 +108,8 @@ export default function PublicBooking() {
     let eTime = new Date(`2000-01-01T16:30:00`);
     const eEnd = new Date(`2000-01-01T21:00:00`);
     let eCounter = 1;
-    while (eTime < eEnd) {
-      slots.push({ number: eCounter, time: formatTime(eTime), session: "Evening" });
+        while (eTime < eEnd) {
+            slots.push({ number: eCounter, time: formatTime(eTime), session: "Evening" });
       eTime.setMinutes(eTime.getMinutes() + 10);
       eCounter++;
     }
@@ -148,7 +150,7 @@ export default function PublicBooking() {
     checkHoliday();
   }, [selectedDate, todayStr]); 
 
-  useEffect(() => {
+    useEffect(() => {
     if (!selectedDate) return;
     setSelectedSlot(null);
     const q = query(collection(db, "appointments"), where("date", "==", selectedDate));
@@ -157,27 +159,27 @@ export default function PublicBooking() {
           const data = doc.data();
           return `${data.session || 'Morning'}-${data.appointmentNumber}`;
       });
-      setBookedKeys(keys);
+            setBookedKeys(keys as string[]);
     });
     return () => unsubscribe();
   }, [selectedDate]);
 
-  const handleBook = async (e: React.FormEvent) => {
+    const handleBook = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedSlot) return alert("Please select a time slot");
     if (!name || !phone || !age) return alert("Please fill all fields");
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "appointments"), {
+            await addDoc(collection(db, "appointments"), {
         patientName: name, phone, age, date: selectedDate, 
-        appointmentNumber: selectedSlot.number, appointmentTime: selectedSlot.time,
-        session: selectedSlot.session, status: "pending", createdAt: serverTimestamp(),
-        userId: currentUser ? currentUser.uid : "guest"
+                appointmentNumber: selectedSlot.number, appointmentTime: selectedSlot.time,
+                session: selectedSlot.session, status: "pending", createdAt: serverTimestamp(),
+                userId: currentUser ? currentUser.uid : "guest"
       });
       alert(`Booking Confirmed! \n📅 ${selectedSlot.session} Session \n🔢 Number: ${selectedSlot.number} \n⏰ Time: ${selectedSlot.time}`);
       
-      if (!currentUser) { setName(""); setPhone(""); setAge(""); }
+            if (!currentUser) { setName(""); setPhone(""); setAge(""); }
       setSelectedSlot(null);
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -190,7 +192,7 @@ export default function PublicBooking() {
   ];
 
   return (
-    <div className={`min-h-screen bg-[#F0F9FF] pb-12 relative overflow-x-hidden ${inter.className}`}>
+    <div className={`min-h-screen bg-[#F0F9FF] pb-0 relative overflow-x-hidden ${inter.className}`}>
       
       <SeasonalEffects />
 
@@ -212,7 +214,7 @@ export default function PublicBooking() {
                 <span className="text-sm md:text-lg">💬</span> 
                 <span className="hidden md:inline">Chat</span>
                 
-                {/* Notification Badge (Only shows if unreadCount > 0) */}
+                {/* Notification Badge */}
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 md:top-0 md:right-0 bg-red-600 text-white text-[9px] md:text-[10px] font-black w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full animate-pulse shadow-sm ring-2 ring-white">
                         {unreadCount}
@@ -226,7 +228,7 @@ export default function PublicBooking() {
                 <div className="flex items-center gap-2">
                     <div className="hidden md:flex flex-col text-right mr-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Welcome</span>
-                        <span className="text-xs font-bold text-blue-900 leading-none">{currentUser.name.split(" ")[0]}</span>
+                        <span className="text-xs font-bold text-blue-900 leading-none">{currentUser.name ? currentUser.name.split(" ")[0] : ''}</span>
                     </div>
                     <button onClick={handleLogout} className="bg-red-50 border border-red-200 text-red-500 hover:bg-red-100 px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-md transition-all">
                         Logout
@@ -270,7 +272,7 @@ export default function PublicBooking() {
       </div>
 
       {/* GRID LAYOUT */}
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start mb-12">
         
         {/* 1. SERVICES CARD */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-6 md:p-8 shadow-xl shadow-blue-100/50 border border-blue-50 order-1">
@@ -290,7 +292,7 @@ export default function PublicBooking() {
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between">
                     <div>
                         <p className="text-xs font-bold text-blue-500 uppercase">Welcome Back</p>
-                        <h3 className="text-lg font-bold text-blue-900">{currentUser.name}</h3>
+                        <h3 className="text-lg font-bold text-blue-900">{currentUser.name ?? ''}</h3>
                     </div>
                     <span className="text-2xl">👋</span>
                 </div>
@@ -423,6 +425,10 @@ export default function PublicBooking() {
         </div>
 
       </div>
+
+      {/* 🔥 2. Footer Component එක මෙතැනට දැම්මා 🔥 */}
+      <Footer />
+
     </div>
   );
 }

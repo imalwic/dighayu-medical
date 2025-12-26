@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase'; 
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, runTransaction, serverTimestamp, addDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import AdminNavbar from "@/components/Navbar"; 
 
 // --- Types ---
@@ -197,9 +197,9 @@ export default function BillingPage() {
         tableRows.push(["Professional Charges", "-", "-", "-", doctorCharge.toFixed(2)]);
     }
 
-    autoTable(pdf, { 
-        head: [["Item", "Instructions", "Price", "Qty", "Amount"]], 
-        body: tableRows, 
+    (pdf as any).autoTable({
+        head: [["Item", "Instructions", "Price", "Qty", "Amount"]],
+        body: tableRows,
         startY: 55,
         theme: 'grid',
         foot: [['', '', '', 'TOTAL:', `Rs. ${total.toFixed(2)}`]],
@@ -394,7 +394,7 @@ export default function BillingPage() {
           <h2 className="text-xl font-black mb-6 text-slate-800 border-b-2 border-slate-200 pb-2">💊 Prescription Queue <span className="bg-blue-600 text-white text-sm px-2 py-1 rounded-full ml-2">{orders.length}</span></h2>
           {orders.length === 0 ? <p className="text-slate-400 font-bold text-center mt-10">No pending prescriptions.</p> : orders.map((order) => (
               <div key={order.id} onClick={() => loadOrderToBill(order)} className={`p-5 rounded-2xl border-2 cursor-pointer mb-3 transition shadow-sm hover:shadow-md ${selectedOrder?.id === order.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-300 hover:border-blue-400'}`}>
-                  <div className="flex justify-between items-center"><h4 className="font-black text-lg text-slate-800">{order.patientName}</h4><span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">{new Date(order.createdAt?.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
+                  <div className="flex justify-between items-center"><h4 className="font-black text-lg text-slate-800">{order.patientName}</h4><span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">{order.createdAt?.seconds ? new Date(order.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</span></div>
                   <p className="text-xs font-bold text-slate-500 mt-1">Doc Charge: {order.doctorCharge ? `Rs.${order.doctorCharge}` : 'FREE'}</p>
               </div>
           ))}
