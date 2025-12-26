@@ -1,0 +1,21 @@
+{
+  "name": "Dighayu Medical Center",
+  "short_name": "Dighayu App",
+  "description": "Pharmacy Management System for Dighayu Medical",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/dighayu.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/dighayu.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
