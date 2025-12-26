@@ -17,7 +17,7 @@ export default function PublicBooking() {
   const router = useRouter();  
   
   type UserType = { uid?: string; name?: string; phone?: string; age?: string } | null;
-  type Slot = { number: number; time: string; session: string };
+  type Slot = { number: number; session: string };
   type HolidayAlert = { type?: string; session?: 'full' | 'morning' | 'evening'; message?: string } | null;
 
   const [currentUser, setCurrentUser] = useState<UserType>(null);
@@ -28,9 +28,12 @@ export default function PublicBooking() {
   const [phone, setPhone] = useState("");
   const [age, setAge] = useState("");  
   
+  // 🔥 වෙනස්කම 1: වේලාව මිනිත්තු වලින් ගණනය කිරීම (Logic Update)
   const todayDateObj = new Date();
-  const currentHour = todayDateObj.getHours();
-  const isTodayAvailable = currentHour < 21; 
+  const currentTotalMinutes = todayDateObj.getHours() * 60 + todayDateObj.getMinutes();
+  
+  // Evening cutoff is 8:30 PM (20:30) => 20 * 60 + 30 = 1230 minutes
+  const isTodayAvailable = currentTotalMinutes < 1230; 
 
   const todayStr = todayDateObj.toISOString().split('T')[0];
   const tomorrowDateObj = new Date();
@@ -55,7 +58,6 @@ export default function PublicBooking() {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           setCurrentUser(userData);
-          // Auto-fill form if logged in
           setName(userData.name || "");
           setPhone(userData.phone || "");
           setAge(userData.age || "");
@@ -71,7 +73,6 @@ export default function PublicBooking() {
         }
       } else {
         setCurrentUser(null);
-        // Clear form if logged out
         setName(""); setPhone(""); setAge("");
         setUnreadCount(0);
       }
@@ -85,7 +86,6 @@ export default function PublicBooking() {
     window.location.reload(); 
   };
 
-  // 1. CHAT SECURITY CHECK
   const handleChatClick = () => {
     if (currentUser) {
         router.push("/chat");
@@ -95,36 +95,45 @@ export default function PublicBooking() {
     }
   };
 
-  // SLOT GENERATION
+  // SLOT GENERATION (Numbers Only)
   const generateSlots = () => {
     const slots: Slot[] = [];
-    const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    let mTime = new Date(`2000-01-01T06:30:00`);
-    const mEnd = new Date(`2000-01-01T08:00:00`);
-    let mCounter = 1;
-    while (mTime < mEnd) {
-      slots.push({ number: mCounter, time: formatTime(mTime), session: "Morning" });
-      mTime.setMinutes(mTime.getMinutes() + 10);
-      mCounter++;
+    // Morning: 1-25
+    for (let i = 1; i <= 25; i++) {
+        slots.push({ number: i, session: "Morning" });
     }
-
-    let eTime = new Date(`2000-01-01T16:30:00`);
-    const eEnd = new Date(`2000-01-01T21:00:00`);
-    let eCounter = 1;
-    while (eTime < eEnd) {
-      slots.push({ number: eCounter, time: formatTime(eTime), session: "Evening" });
-      eTime.setMinutes(eTime.getMinutes() + 10);
-      eCounter++;
+    // Evening: 1-60
+    for (let i = 1; i <= 60; i++) {
+        slots.push({ number: i, session: "Evening" });
     }
     return slots;
   };
 
   const allSlots = generateSlots();
 
+  // 🔥 වෙනස්කම 2: විනාඩි 30කට කලින් Slot ඉවත් කිරීමේ Logic එක
   const getVisibleSlots = () => {
+    const now = new Date();
+    // දැන් වේලාව මිනිත්තු වලින්
+    const curMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Morning Cutoff: 7:30 AM (7 * 60 + 30 = 450 minutes)
+    const morningCutoff = 450; 
+
+    // Evening Cutoff: 8:30 PM (20 * 60 + 30 = 1230 minutes)
+    const eveningCutoff = 1230;
+
     return allSlots.filter(slot => {
-        if (selectedDate === todayStr && currentHour >= 8 && slot.session === "Morning") return false;
+        // දවස "අද" නම් පමණක් වේලාව බලන්න
+        if (selectedDate === todayStr) {
+            // උදේ Session එක 7:30 පහු වුනානම් පෙන්නන්න එපා
+            if (slot.session === "Morning" && curMinutes >= morningCutoff) return false;
+            
+            // හවස Session එක 8:30 පහු වුනානම් පෙන්නන්න එපා
+            if (slot.session === "Evening" && curMinutes >= eveningCutoff) return false;
+        }
+
+        // Holiday Check
         if (holidayAlert) {
             if (holidayAlert.session === 'full') return false;
             if (holidayAlert.session === 'morning' && slot.session === "Morning") return false;
@@ -168,32 +177,29 @@ export default function PublicBooking() {
     return () => unsubscribe();
   }, [selectedDate]);
 
-  // 🔥 2. BOOKING SECURITY CHECK (UPDATED)
   const handleBook = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // STEP 1: Check if User is Logged In
     if (!currentUser) {
         alert("කරුණාකර අංකයක් වෙන් කරගැනීමට පළමුව Login වන්න (Please login first).");
         router.push("/patient/login");
-        return; // ⛔ මෙතැනින් නවතී. පහලට යන්නේ නෑ.
+        return; 
     }
 
-    // STEP 2: Validate Inputs
-    if (!selectedSlot) return alert("Please select a time slot");
+    if (!selectedSlot) return alert("Please select a number");
     if (!name || !phone || !age) return alert("Please fill all fields");
 
     setLoading(true);
     try {
-      // STEP 3: Add Booking (Only if currentUser exists)
       await addDoc(collection(db, "appointments"), {
         patientName: name, phone, age, date: selectedDate, 
-        appointmentNumber: selectedSlot.number, appointmentTime: selectedSlot.time,
+        appointmentNumber: selectedSlot.number, 
+        appointmentTime: "N/A",
         session: selectedSlot.session, status: "pending", createdAt: serverTimestamp(),
-        userId: currentUser.uid // 🔥 Guest අයින් කළා. අනිවාර්යයෙන් User ID එක ඕන.
+        userId: currentUser.uid 
       });
 
-      alert(`Booking Confirmed! \n📅 ${selectedSlot.session} Session \n🔢 Number: ${selectedSlot.number} \n⏰ Time: ${selectedSlot.time}`);
+      alert(`Booking Confirmed! \n📅 ${selectedSlot.session} Session \n🔢 Number: ${selectedSlot.number}`);
       setSelectedSlot(null);
       
     } catch (error) { 
@@ -329,28 +335,27 @@ export default function PublicBooking() {
                 </button>
             </div>
 
-            {/* Selected Time Display */}
+            {/* Selected Number Display */}
             <div className="relative h-auto py-6 bg-gradient-to-r from-blue-600 to-blue-800 rounded-3xl flex flex-col items-center justify-center px-4 md:px-12 mb-6 md:mb-8 shadow-lg shadow-blue-500/20 overflow-hidden group text-center">
                 <div className="absolute right-0 top-0 w-32 h-full bg-white/10 skew-x-12 group-hover:skew-x-0 transition duration-500"></div>
                 <div className="relative z-10 text-white">
-                    <p className="text-[10px] md:text-xs font-medium opacity-80 uppercase tracking-widest mb-2">Selected Time</p>
+                    <p className="text-[10px] md:text-xs font-medium opacity-80 uppercase tracking-widest mb-2">Selected Number</p>
                     {selectedSlot ? (
                         <>
-                            <p className={`text-3xl md:text-4xl font-black leading-none mb-1 ${poppins.className}`}>{selectedSlot.time}</p>
+                            <p className={`text-5xl md:text-6xl font-black leading-none mb-2 ${poppins.className}`}>No. {selectedSlot.number}</p>
                             <div className="flex gap-2 justify-center mt-2">
-                                <span className="text-xs md:text-sm font-bold bg-white/20 px-3 py-1 rounded-full uppercase">{selectedSlot.session}</span>
-                                <span className="text-xs md:text-sm font-bold bg-white text-blue-900 px-3 py-1 rounded-full">No: {selectedSlot.number}</span>
+                                <span className="text-sm font-bold bg-white/20 px-4 py-1 rounded-full uppercase">{selectedSlot.session}</span>
                             </div>
                         </>
                     ) : (
-                        <p className="text-lg md:text-xl font-bold opacity-60">Please Select a Time Below 👇</p>
+                        <p className="text-lg md:text-xl font-bold opacity-60">Please Select a Number Below 👇</p>
                     )}
                 </div>
             </div>
 
-            {/* Time Slots Grid */}
+            {/* Number Selection Grid */}
             <div className="mb-8">
-                <h4 className={`text-sm font-bold text-slate-500 uppercase mb-3 ml-1 ${notoSinhala.className}`}>වේලාවක් තෝරන්න (Select Time)</h4>
+                <h4 className={`text-sm font-bold text-slate-500 uppercase mb-3 ml-1 ${notoSinhala.className}`}>අංකයක් තෝරන්න (Select Number)</h4>
                 
                 {holidayAlert && holidayAlert.session !== 'full' && (
                     <div className={`mb-4 p-3 rounded-xl border-l-4 text-xs md:text-sm font-bold flex items-center gap-2 ${notoSinhala.className} ${holidayAlert.session === 'morning' ? 'bg-orange-50 border-orange-400 text-orange-800' : 'bg-blue-50 border-blue-400 text-blue-800'}`}>
@@ -366,7 +371,7 @@ export default function PublicBooking() {
                         <p className="text-xs md:text-sm opacity-80 font-bold">Booking is closed for this day.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 md:max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 max-h-64 md:max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                         {visibleSlots.length === 0 ? (
                             <div className="col-span-full text-center p-6 text-slate-400 font-bold bg-slate-50 rounded-xl border border-slate-100">No slots available.</div>
                         ) : (
@@ -376,9 +381,9 @@ export default function PublicBooking() {
                                 const isSelected = selectedSlot?.number === slot.number && selectedSlot?.session === slot.session;
                                 return (
                                     <button key={slotKey} disabled={isBooked} onClick={() => setSelectedSlot(slot)}
-                                        className={`relative py-2 px-1 rounded-xl text-sm font-bold border transition-all duration-200 flex flex-col items-center justify-center ${isBooked ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed decoration-slate-400' : isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg transform scale-105' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'}`}>
-                                        <span>{slot.time}</span>
-                                        <span className={`text-[9px] uppercase mt-0.5 ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>{slot.session} • No {slot.number}</span>
+                                        className={`relative py-3 px-1 rounded-xl text-sm font-bold border transition-all duration-200 flex flex-col items-center justify-center ${isBooked ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed decoration-slate-400' : isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg transform scale-105' : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50'}`}>
+                                        <span className="text-xl font-black">No. {slot.number}</span>
+                                        <span className={`text-[9px] uppercase mt-1 ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>{slot.session}</span>
                                         {isBooked && <span className="absolute inset-0 flex items-center justify-center text-[10px] bg-white/80 text-red-500 font-black rotate-12">BOOKED</span>}
                                     </button>
                                 );
