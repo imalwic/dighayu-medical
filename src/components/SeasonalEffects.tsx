@@ -12,11 +12,11 @@ export default function SeasonalEffects() {
     const date = today.getDate();
 
     // 🎄 Christmas: දෙසැම්බර් 10 සිට
-    if (month === 11 && date >= 10) {
+    if (month === 11 && date >= 10 && date <= 26) {
       setSeason("christmas");
     } 
     // ☀️ New Year: අප්‍රේල් මාසය
-    else if (month === 3) {
+    else if (month === 3 && date >= 10 && date <= 18) {
       setSeason("newyear");
     } else {
       setSeason(null);
