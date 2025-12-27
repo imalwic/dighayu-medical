@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+// 🔥 අලුතෙන් sendPasswordResetEmail එකතු කළා
+import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth, db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { Poppins, Noto_Sans_Sinhala } from "next/font/google";
@@ -13,7 +14,7 @@ const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["400", "7
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"admin" | "staff">("admin"); // Toggle Login Mode
+  const [mode, setMode] = useState<"admin" | "staff">("admin");
 
   // Form States
   const [email, setEmail] = useState("");
@@ -21,26 +22,51 @@ export default function LoginPage() {
   const [staffName, setStaffName] = useState("");
   const [staffCode, setStaffCode] = useState("");
 
-  // 🔥 1. HANDLE ADMIN LOGIN (Firebase)
+  // 🔥 1. HANDLE ADMIN LOGIN (With Security Check)
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // 👇 මෙතනට ඔයාගේ Register වුන Doctor Email එක දාන්න
+    const ALLOWED_DOCTOR_EMAIL = "doctor@dighayu.com"; 
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Success -> Go to Dashboard
-      router.push("/admin"); 
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      if (user.email === ALLOWED_DOCTOR_EMAIL) {
+         router.push("/admin"); 
+      } else {
+         await signOut(auth);
+         alert("Access Denied: You are not authorized as a Doctor. 🚫");
+      }
     } catch (err) {
+      console.error(err);
       alert("Login Failed: Incorrect Email or Password");
     }
     setLoading(false);
   };
 
-  // 🔥 2. HANDLE STAFF LOGIN (Firestore Check)
+  // 🔥 2. FORGOT PASSWORD FUNCTION (අලුත් කොටස)
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert("කරුණාකර පළමුව ඔබේ Email ලිපිනය ඇතුළත් කරන්න! 📧");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("Password Reset Link එක ඔබේ Email එකට එව්වා! කරුණාකර Inbox (හෝ Spam) Check කරන්න. 📩");
+    } catch (err) {
+      console.error(err);
+      alert("Error: මෙම Email එක System එකේ නැත හෝ වැරදියි.");
+    }
+  };
+
+  // 🔥 3. HANDLE STAFF LOGIN
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Check if Name & Code matches any document in 'staff_access' collection
       const q = query(
         collection(db, "staff_access"),
         where("name", "==", staffName),
@@ -49,7 +75,6 @@ export default function LoginPage() {
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        // Success -> Save to LocalStorage & Go to Dashboard
         const staffData = querySnapshot.docs[0].data();
         localStorage.setItem("staffUser", JSON.stringify(staffData));
         router.push("/admin");
@@ -105,6 +130,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+            
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Password</label>
               <input 
@@ -116,6 +142,18 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+
+            {/* 🔥 Forgot Password Button (අලුත් කොටස) */}
+            <div className="text-right">
+              <button 
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-xs font-bold text-blue-500 hover:text-blue-700 underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             <button 
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition active:scale-95 disabled:opacity-50 mt-2"
