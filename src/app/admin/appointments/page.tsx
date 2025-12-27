@@ -3,7 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
-import AdminNavbar from "@/components/Navbar"; 
+import AdminNavbar from "@/components/Navbar";
+
+// --- Icons ---
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -157,54 +164,64 @@ export default function AppointmentsPage() {
   const eveningList = appointments.filter(a => a.session === "Evening");
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-900 pb-20">
       <AdminNavbar />
 
+      {/* --- CONSULTATION MODAL --- */}
       {isModalOpen && currentPatient && (
-          <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white w-full max-w-6xl h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in border border-slate-300">
+          <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 flex items-center justify-center p-0 md:p-4">
+              <div className="bg-white w-full md:max-w-6xl h-full md:h-[90vh] md:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in relative">
                   
-                  <div className={`p-4 flex justify-between items-center text-white shadow-md ${currentPatient.isWalkIn ? 'bg-red-600' : 'bg-blue-700'}`}>
+                  {/* Modal Header */}
+                  <div className={`p-4 md:p-5 flex justify-between items-center text-white shadow-lg z-10 ${currentPatient.isWalkIn ? 'bg-red-600' : 'bg-slate-900'}`}>
                       <div className="flex-1">
                           {currentPatient.isWalkIn ? (
-                              <div className="flex gap-4 items-center">
-                                  <span className="text-xl font-black">🚨 EMERGENCY:</span>
-                                  <input type="text" placeholder="Patient Name" className="p-2 rounded text-slate-900 font-bold outline-none" value={currentPatient.patientName} onChange={(e) => setCurrentPatient({...currentPatient, patientName: e.target.value})} />
-                                  <input type="text" placeholder="Age" className="p-2 w-20 rounded text-slate-900 font-bold outline-none" value={currentPatient.age} onChange={(e) => setCurrentPatient({...currentPatient, age: e.target.value})} />
+                              <div className="flex flex-col md:flex-row gap-2 md:gap-4 md:items-center">
+                                  <span className="text-lg font-black uppercase tracking-wider flex items-center gap-2"><UserIcon /> EMERGENCY</span>
+                                  <div className="flex gap-2">
+                                    <input type="text" placeholder="Patient Name" className="flex-1 p-2 rounded-lg text-slate-900 font-bold outline-none text-sm" value={currentPatient.patientName} onChange={(e) => setCurrentPatient({...currentPatient, patientName: e.target.value})} autoFocus />
+                                    <input type="text" placeholder="Age" className="w-16 p-2 rounded-lg text-slate-900 font-bold outline-none text-center text-sm" value={currentPatient.age} onChange={(e) => setCurrentPatient({...currentPatient, age: e.target.value})} />
+                                  </div>
                               </div>
                           ) : (
-                              <>
-                                <h2 className="text-xl font-black">{currentPatient.patientName}</h2>
-                                <p className="text-sm opacity-90">Age: {currentPatient.age} | Mobile: {currentPatient.phone}</p>
-                              </>
+                              <div className="flex items-center gap-3">
+                                <div className="bg-white/10 p-2 rounded-full"><UserIcon /></div>
+                                <div>
+                                    <h2 className="text-xl font-black">{currentPatient.patientName}</h2>
+                                    <p className="text-xs opacity-80 font-medium">Age: {currentPatient.age} | Mobile: {currentPatient.phone}</p>
+                                </div>
+                              </div>
                           )}
                       </div>
-                      <button onClick={() => setIsModalOpen(false)} className="bg-white/20 p-2 rounded-full hover:bg-white/40 font-bold">Close ✕</button>
+                      <button onClick={() => setIsModalOpen(false)} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition shadow-lg"><CloseIcon /></button>
                   </div>
 
-                  <div className="flex flex-1 overflow-hidden">
-                      {/* Left: Form */}
-                      <div className="w-1/2 p-6 border-r-2 border-slate-200 overflow-y-auto bg-slate-50">
-                          <h3 className="font-bold text-slate-700 mb-4 border-b pb-2">📝 Write Prescription</h3>
+                  <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                      
+                      {/* Left: Input Form (Scrollable on mobile) */}
+                      <div className="w-full lg:w-5/12 p-4 md:p-6 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-slate-50">
+                          <h3 className="font-black text-slate-700 mb-4 uppercase tracking-widest text-xs flex items-center gap-2">📝 Consultation Details</h3>
                           
-                          <div className="mb-4">
-                              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Diagnosis</label>
-                              <input type="text" className="w-full p-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold" 
+                          <div className="mb-5">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Diagnosis</label>
+                              <textarea rows={2} className="w-full p-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800 bg-white shadow-sm resize-none" 
                                   placeholder="Enter Diagnosis..." value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} />
                           </div>
 
-                          <div className="bg-white p-4 rounded-xl border-2 border-slate-300 shadow-sm mb-4">
-                              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Add Medicine</label>
-                              <div className="relative mb-3">
-                                  <input type="text" className="w-full p-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold" 
-                                      placeholder="Type Medicine Name..." 
-                                      value={searchTerm} 
+                          <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm mb-4 relative">
+                              <h4 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2"><PlusIcon /> Add Medicine</h4>
+                              
+                              {/* Search Medicine */}
+                              <div className="relative mb-4">
+                                  <div className="absolute left-3 top-3 text-slate-400"><SearchIcon /></div>
+                                  <input type="text" className="w-full pl-10 p-3 border-2 border-slate-200 bg-slate-50 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800 transition" 
+                                      placeholder="Search Medicine..." value={searchTerm} 
                                       onChange={(e) => { setSearchTerm(e.target.value); setShowSuggestions(true); }} 
                                   />
                                   {showSuggestions && searchTerm && (
-                                      <div className="absolute z-10 w-full bg-white border-2 border-slate-300 mt-1 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                      <div className="absolute z-20 w-full bg-white border-2 border-slate-200 mt-1 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
                                           {inventory.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(med => (
-                                              <div key={med.id} onClick={() => selectMedicine(med)} className="p-2 hover:bg-blue-50 cursor-pointer font-bold border-b last:border-none border-slate-100">
+                                              <div key={med.id} onClick={() => selectMedicine(med)} className="p-3 hover:bg-blue-50 cursor-pointer font-bold text-slate-700 border-b border-slate-50 last:border-none text-sm">
                                                   {med.name}
                                               </div>
                                           ))}
@@ -212,112 +229,171 @@ export default function AppointmentsPage() {
                                   )}
                               </div>
 
-                              <div className="flex gap-4 mb-3">
-                                  <label className="flex items-center gap-2 font-bold text-sm cursor-pointer select-none"><input type="checkbox" className="w-4 h-4 accent-blue-600" checked={medInput.morning} onChange={e => setMedInput({...medInput, morning: e.target.checked})} /> උදේ</label>
-                                  <label className="flex items-center gap-2 font-bold text-sm cursor-pointer select-none"><input type="checkbox" className="w-4 h-4 accent-blue-600" checked={medInput.noon} onChange={e => setMedInput({...medInput, noon: e.target.checked})} /> දහවල්</label>
-                                  <label className="flex items-center gap-2 font-bold text-sm cursor-pointer select-none"><input type="checkbox" className="w-4 h-4 accent-blue-600" checked={medInput.night} onChange={e => setMedInput({...medInput, night: e.target.checked})} /> රාත්‍රී</label>
+                              {/* Dosage Selectors (Modern Pills) */}
+                              <div className="grid grid-cols-3 gap-2 mb-4">
+                                  {['Morning', 'Noon', 'Night'].map((time) => (
+                                      <button key={time} 
+                                          onClick={() => setMedInput({...medInput, [time.toLowerCase()]: !medInput[time.toLowerCase() as keyof typeof medInput]})}
+                                          className={`py-2 rounded-lg text-xs font-bold border-2 transition-all ${medInput[time.toLowerCase() as keyof typeof medInput] ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-300'}`}>
+                                          {time}
+                                      </button>
+                                  ))}
                               </div>
 
-                              <div className="mb-3">
-                                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Timing</label>
-                                  <select className="w-full p-2 border-2 border-slate-300 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500"
+                              <div className="mb-4">
+                                  <select className="w-full p-2.5 border-2 border-slate-200 rounded-xl font-bold text-slate-600 outline-none focus:border-blue-500 text-sm bg-slate-50"
                                       value={medInput.timing} onChange={e => setMedInput({...medInput, timing: e.target.value})}>
-                                      <option value="After Meal">කෑමට පසු (After Meal)</option>
-                                      <option value="Before Meal">කෑමට පෙර (Before Meal)</option>
-                                      <option value="With Meal">ආහාර සමග (With Meal)</option>
+                                      <option value="After Meal">🍽️ After Meal</option>
+                                      <option value="Before Meal">🥣 Before Meal</option>
+                                      <option value="With Meal">🥗 With Meal</option>
                                   </select>
                               </div>
 
-                              <div className="flex gap-2 mb-4">
-                                  <div className="w-1/3"><label className="block text-xs font-bold text-slate-500 mb-1">Dose (පෙති)</label><input type="number" min="0.5" step="0.5" className="w-full p-2 border-2 border-slate-300 rounded-lg font-bold outline-none text-center focus:border-blue-500 placeholder-slate-300" placeholder="0" value={medInput.doseAmount} onChange={e => setMedInput({...medInput, doseAmount: e.target.value})} /></div>
-                                  <div className="w-1/3"><label className="block text-xs font-bold text-slate-500 mb-1">Days (දින)</label><input type="number" min="1" className="w-full p-2 border-2 border-slate-300 rounded-lg font-bold outline-none text-center focus:border-blue-500 placeholder-slate-300" placeholder="0" value={medInput.days} onChange={e => setMedInput({...medInput, days: e.target.value})} /></div>
-                                  <div className="w-1/3"><label className="block text-xs font-bold text-slate-500 mb-1">Qty (Auto)</label><input type="number" className="w-full p-2 border-2 border-slate-300 bg-slate-100 rounded-lg font-bold text-center text-blue-700" value={medInput.qty} readOnly /></div>
+                              <div className="grid grid-cols-3 gap-3 mb-4">
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Dose</label><input type="number" min="0.5" step="0.5" className="w-full p-2 border-2 border-slate-200 rounded-xl font-bold outline-none text-center focus:border-blue-500" placeholder="0" value={medInput.doseAmount} onChange={e => setMedInput({...medInput, doseAmount: e.target.value})} /></div>
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Days</label><input type="number" min="1" className="w-full p-2 border-2 border-slate-200 rounded-xl font-bold outline-none text-center focus:border-blue-500" placeholder="0" value={medInput.days} onChange={e => setMedInput({...medInput, days: e.target.value})} /></div>
+                                  <div><label className="block text-[10px] font-bold text-slate-400 mb-1">Total</label><div className="w-full p-2.5 bg-blue-50 border border-blue-100 rounded-xl font-black text-center text-blue-600">{medInput.qty}</div></div>
                               </div>
 
-                              <button onClick={addMedicineToList} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">+ Add to List</button>
+                              <button onClick={addMedicineToList} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-md active:scale-95 text-sm flex items-center justify-center gap-2">Add Medicine <PlusIcon /></button>
                           </div>
                       </div>
 
-                      {/* Right: List */}
-                      <div className="w-1/2 p-6 flex flex-col bg-white">
-                          <h3 className="font-bold text-slate-700 mb-4 border-b pb-2">📋 Prescription Items</h3>
-                          <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 border border-slate-200 rounded-xl p-2 bg-slate-50">
-                              {prescribedMeds.length === 0 ? <p className="text-center text-slate-400 mt-10">No items added.</p> : prescribedMeds.map((item, idx) => (
-                                  <div key={idx} className="flex justify-between items-center bg-white p-3 mb-2 rounded-lg border border-slate-200 shadow-sm">
-                                      <div><p className="font-black text-slate-800">{item.name}</p><p className="text-xs font-bold text-slate-500">{item.dosage.morning ? "M " : ""}{item.dosage.noon ? "N " : ""}{item.dosage.night ? "Nt" : ""} <span className="text-blue-600 ml-2">({item.dosage.timing})</span><span className="text-slate-400 ml-2">[{item.doseAmount} tab x {item.days} days]</span></p></div>
-                                      <div className="flex items-center gap-3"><span className="text-sm font-bold bg-yellow-100 px-2 py-1 rounded border border-yellow-200">Qty: {item.qty}</span><button onClick={() => removeMed(idx)} className="text-red-500 font-bold hover:bg-red-50 px-2 py-1 rounded">✕</button></div>
+                      {/* Right: Prescription List (Scrollable) */}
+                      <div className="w-full lg:w-7/12 p-4 md:p-6 flex flex-col bg-white h-full">
+                          <h3 className="font-black text-slate-700 mb-4 uppercase tracking-widest text-xs border-b pb-2">💊 Current Prescription</h3>
+                          
+                          <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 space-y-2 pr-1">
+                              {prescribedMeds.length === 0 ? (
+                                  <div className="flex flex-col items-center justify-center h-40 text-slate-300 border-2 border-dashed border-slate-100 rounded-xl">
+                                      <span className="text-3xl mb-2 opacity-50">💊</span>
+                                      <p className="font-bold text-sm">No medicines added yet.</p>
+                                  </div>
+                              ) : prescribedMeds.map((item, idx) => (
+                                  <div key={idx} className="flex justify-between items-center bg-white p-3 md:p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 transition">
+                                      <div>
+                                          <p className="font-black text-slate-800 text-sm md:text-base">{item.name}</p>
+                                          <p className="text-xs font-bold text-slate-500 mt-1 flex flex-wrap gap-2">
+                                              <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{item.dosage.morning ? "1" : "0"}-{item.dosage.noon ? "1" : "0"}-{item.dosage.night ? "1" : "0"}</span>
+                                              <span className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{item.dosage.timing}</span>
+                                              <span className="text-slate-400">{item.doseAmount} tab x {item.days} days</span>
+                                          </p>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                          <span className="text-xs font-black bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg border border-yellow-200">Qty: {item.qty}</span>
+                                          <button onClick={() => removeMed(idx)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition"><TrashIcon /></button>
+                                      </div>
                                   </div>
                               ))}
                           </div>
-                          <div className="bg-slate-100 p-4 rounded-xl border-2 border-slate-200 mb-4">
-                              <p className="text-xs font-black text-slate-500 uppercase mb-2">Doctor's Fee (Service Charge)</p>
-                              <div className="flex items-center gap-2">
-                                  <button onClick={() => setDocCharge(500)} className={`flex-1 py-2 rounded-lg font-bold text-sm border-2 ${docCharge === 500 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-slate-300 text-slate-600'}`}>Rs. 500</button>
-                                  <button onClick={() => setDocCharge(0)} className={`flex-1 py-2 rounded-lg font-bold text-sm border-2 ${docCharge === 0 ? 'bg-green-600 text-white border-green-600' : 'bg-white border-slate-300 text-slate-600'}`}>FREE</button>
-                                  <input type="number" className="flex-1 p-2 border-2 border-slate-300 rounded-lg font-bold text-center outline-none focus:border-blue-500" placeholder="Custom" value={docCharge} onChange={(e) => setDocCharge(Number(e.target.value))} />
+
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Doctor's Fee (Service Charge)</p>
+                              <div className="flex items-center gap-2 mb-4">
+                                  <button onClick={() => setDocCharge(500)} className={`flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm border-2 transition ${docCharge === 500 ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white border-slate-200 text-slate-500'}`}>Rs. 500</button>
+                                  <button onClick={() => setDocCharge(0)} className={`flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm border-2 transition ${docCharge === 0 ? 'bg-green-600 text-white border-green-600 shadow-md' : 'bg-white border-slate-200 text-slate-500'}`}>FREE</button>
+                                  <div className="relative flex-1">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rs.</span>
+                                      <input type="number" className="w-full py-2.5 pl-8 pr-2 border-2 border-slate-200 rounded-xl font-bold text-center outline-none focus:border-blue-500 text-sm bg-white" placeholder="Custom" value={docCharge} onChange={(e) => setDocCharge(Number(e.target.value))} />
+                                  </div>
                               </div>
+                              <button onClick={handleSendToPharmacy} disabled={prescribedMeds.length === 0} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-black text-base md:text-lg hover:shadow-blue-200 hover:shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2">
+                                  Confirm & Send to Pharmacy 🚀
+                              </button>
                           </div>
-                          <button onClick={handleSendToPharmacy} disabled={prescribedMeds.length === 0} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition shadow-lg flex justify-center gap-2 disabled:opacity-50">Save & Send to Pharmacy 🚀</button>
                       </div>
                   </div>
               </div>
           </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 pt-24 pb-12">
-        <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-            <div className="bg-white p-6 rounded-2xl shadow border-2 border-slate-200 flex-1 w-full">
-                <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-3xl font-black text-slate-900">🗓️ Doctor's Console</h1>
-                    {/* 🔥 SHOW EMERGENCY COUNT 🔥 */}
+      {/* --- MAIN PAGE CONTENT --- */}
+      <div className="max-w-7xl mx-auto px-4 pt-24">
+        <div className="flex flex-col md:flex-row justify-between items-stretch gap-4 mb-8">
+            
+            {/* Header Card */}
+            <div className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-200 flex-1 w-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
+                
+                <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 relative z-10 gap-4">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900">🗓️ Appointments</h1>
+                        <p className="text-slate-500 font-medium text-sm mt-1">Manage today's patient queue.</p>
+                    </div>
+                    
+                    {/* Counts */}
                     <div className="flex gap-3">
-                        <div className="bg-blue-100 text-blue-900 px-4 py-2 rounded-xl font-bold border border-blue-200 flex flex-col items-center">
-                            <span className="text-xs uppercase opacity-70">Appointments</span>
-                            <span className="text-2xl leading-none">{regularCount}</span>
+                        <div className="bg-blue-50 text-blue-900 px-4 py-2 rounded-2xl border border-blue-100 flex flex-col items-center min-w-[90px]">
+                            <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">Regular</span>
+                            <span className="text-2xl font-black">{regularCount}</span>
                         </div>
-                        <div className="bg-red-100 text-red-900 px-4 py-2 rounded-xl font-bold border border-red-200 flex flex-col items-center animate-pulse">
-                            <span className="text-xs uppercase opacity-70">Emergency</span>
-                            <span className="text-2xl leading-none">{emergencyCount}</span>
+                        <div className={`bg-red-50 text-red-900 px-4 py-2 rounded-2xl border border-red-100 flex flex-col items-center min-w-[90px] ${emergencyCount > 0 ? 'animate-pulse border-red-300' : ''}`}>
+                            <span className="text-[10px] uppercase font-bold text-red-400 tracking-wider">Emergency</span>
+                            <span className="text-2xl font-black">{emergencyCount}</span>
                         </div>
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <span className="text-sm font-bold text-slate-500 uppercase">Selected Date:</span>
-                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-white p-2 rounded-lg font-bold text-slate-900 outline-none border-2 border-slate-300 focus:border-blue-600" />
+                {/* Date Picker */}
+                <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-100 w-fit relative z-10">
+                    <span className="text-xs font-bold text-slate-400 uppercase ml-2">Date:</span>
+                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-white px-3 py-1.5 rounded-xl font-bold text-slate-800 outline-none border border-slate-200 focus:border-blue-500 text-sm shadow-sm" />
                 </div>
             </div>
             
-            <button onClick={openEmergencyConsultation} className="h-full bg-red-600 hover:bg-red-700 text-white px-8 py-8 rounded-2xl font-black text-lg shadow-xl border-4 border-red-500 hover:scale-105 transition flex items-center justify-center gap-2">
-                <span>🚨 Emergency / Walk-in</span>
+            {/* Walk-in Button */}
+            <button onClick={openEmergencyConsultation} className="md:w-64 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-6 rounded-3xl font-black text-lg shadow-xl shadow-red-200 border-4 border-white ring-2 ring-red-100 transform hover:scale-[1.02] transition flex flex-col items-center justify-center gap-2 group">
+                <span className="text-3xl group-hover:scale-110 transition">🚨</span>
+                <span>Emergency / Walk-in</span>
             </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <SessionCard title="☀️ Morning" list={morningList} onConsult={openConsultation} onDelete={handleDelete} />
-            <SessionCard title="🌙 Evening" list={eveningList} onConsult={openConsultation} onDelete={handleDelete} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 pb-12">
+            <SessionCard title="☀️ Morning Session" list={morningList} onConsult={openConsultation} onDelete={handleDelete} color="blue" />
+            <SessionCard title="🌙 Evening Session" list={eveningList} onConsult={openConsultation} onDelete={handleDelete} color="indigo" />
         </div>
       </div>
     </div>
   );
 }
 
-function SessionCard({ title, list, onConsult, onDelete }: any) {
+function SessionCard({ title, list, onConsult, onDelete, color }: any) {
+    const isBlue = color === 'blue';
     return (
-        <div className="bg-white p-6 rounded-3xl shadow-lg border-2 border-slate-200">
-            <h2 className="text-xl font-black text-slate-800 mb-4 border-b-2 border-slate-100 pb-2">{title} <span className="text-slate-500 text-sm">({list.length})</span></h2>
-            <div className="space-y-3">
-                {list.length === 0 ? <p className="text-slate-400 font-bold text-center py-6">No appointments.</p> : list.map((app: any) => (
-                    <div key={app.id} className={`p-4 rounded-xl border-2 flex justify-between items-center transition ${app.status === 'completed' ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-slate-200 hover:border-blue-500 hover:shadow-md'}`}>
-                        <div>
-                            <span className="font-black text-lg mr-3 bg-slate-800 text-white px-3 py-1 rounded-lg">{app.appointmentNumber}</span>
-                            <span className="font-bold text-slate-900 text-lg">{app.patientName}</span>
-                            {/* Show Label if Walk-in */}
-                            {(app.type === 'walk-in' || app.type === 'emergency') && <span className="ml-2 bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded border border-red-200 font-bold uppercase">Emergency</span>}
-                        </div>
-                        <div className="flex gap-2">
-                            {app.status !== 'completed' && <button onClick={() => onConsult(app)} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-green-700">Start 🩺</button>}
-                            <button onClick={() => onDelete(app.id)} className="text-red-500 hover:bg-red-50 font-bold px-2 rounded">🗑️</button>
+        <div className="bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-full">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                <h2 className={`text-xl font-black ${isBlue ? 'text-blue-900' : 'text-indigo-900'}`}>{title}</h2>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${isBlue ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>{list.length} Patients</span>
+            </div>
+            
+            <div className="space-y-3 flex-1">
+                {list.length === 0 ? (
+                    <div className="h-40 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-100 rounded-3xl">
+                        <p className="font-bold text-sm">No appointments yet.</p>
+                    </div>
+                ) : list.map((app: any) => (
+                    <div key={app.id} className={`p-4 rounded-2xl border transition-all duration-200 group relative overflow-hidden ${app.status === 'completed' ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-md'}`}>
+                        {app.status === 'completed' && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 z-10"><span className="bg-slate-200 text-slate-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-slate-300">Completed</span></div>}
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-0">
+                            <div className="flex items-center gap-4">
+                                <span className={`font-black text-lg w-10 h-10 flex items-center justify-center rounded-xl text-white shadow-sm ${isBlue ? 'bg-blue-600' : 'bg-indigo-600'}`}>{app.appointmentNumber}</span>
+                                <div>
+                                    <h4 className="font-bold text-slate-800 text-lg leading-tight">{app.patientName}</h4>
+                                    {(app.type === 'walk-in' || app.type === 'emergency') && <span className="inline-block mt-1 bg-red-50 text-red-600 text-[10px] px-2 py-0.5 rounded-md border border-red-100 font-bold uppercase tracking-wider">Emergency</span>}
+                                </div>
+                            </div>
+                            
+                            {app.status !== 'completed' && (
+                                <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
+                                    <button onClick={() => onConsult(app)} className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition transform active:scale-95 flex items-center justify-center gap-2">
+                                        Start 🩺
+                                    </button>
+                                    <button onClick={() => onDelete(app.id)} className="w-10 h-10 flex items-center justify-center bg-white border-2 border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition">
+                                        <TrashIcon />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}
