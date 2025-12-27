@@ -349,10 +349,10 @@ export default function BillingPage() {
       )}
 
       {/* --- MAIN LAYOUT --- */}
-      <div className="flex flex-1 pt-16 h-full overflow-hidden relative">
+      <div className="flex flex-1 pt-20 h-full overflow-hidden relative">
         
         {/* MOBILE TABS (Visible only on small screens) */}
-        <div className="lg:hidden absolute top-16 left-0 right-0 z-20 bg-white border-b border-slate-200 flex shadow-sm">
+        <div className="lg:hidden absolute top-20 left-0 right-0 z-20 bg-white border-b border-slate-200 flex shadow-sm">
             <button onClick={() => setActiveTab('billing')} className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 ${activeTab === 'billing' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500'}`}>
                 <span>🧾 Billing</span>
             </button>
@@ -365,7 +365,7 @@ export default function BillingPage() {
         <div className={`w-full lg:w-3/4 flex flex-col bg-white h-full relative transition-transform duration-300 ${activeTab === 'billing' ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} lg:border-r border-slate-200`}>
           
           {/* Header & Search */}
-          <div className="p-4 sm:p-6 pb-2 mt-12 lg:mt-0">
+          <div className="p-4 sm:p-6 pb-2 mt-10 lg:mt-0">
              <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2 tracking-tight">
                     Billing <span className="text-slate-300">/</span>

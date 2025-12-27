@@ -8,14 +8,19 @@ import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import AdminNavbar from "@/components/Navbar"; 
-import Footer from "@/components/Footer"; 
+import AdminNavbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+
+// --- Icons (New SVG Icons for better look) ---
+const MoneyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
+const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+const AlertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [loadingAuth, setLoadingAuth] = useState(true);
   
-  // 🔥 ROLE: 'admin' or 'staff'
+  // ROLE: 'admin' or 'staff'
   const [userRole, setUserRole] = useState<"admin" | "staff" | null>(null);
   const [staffName, setStaffName] = useState("");
 
@@ -24,10 +29,12 @@ export default function AdminDashboard() {
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
   const [todayOrders, setTodayOrders] = useState<any[]>([]); 
   const [pendingCount, setPendingCount] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [showLowStockModal, setShowLowStockModal] = useState(false);
-  const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+
+  // 🔥 NEW STOCK ALERT STATES
+  const [expiredCount, setExpiredCount] = useState(0);
+  const [expiringSoonCount, setExpiringSoonCount] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
 
   // Admin Features (Holidays, Staff)
   const [holidayDate, setHolidayDate] = useState("");
@@ -73,17 +80,40 @@ export default function AdminDashboard() {
     const qAppt = query(collection(db, "appointments"), where("status", "==", "pending"));
     const unsubAppt = onSnapshot(qAppt, (snap) => setPendingCount(snap.size));
     
-    // Low Stock Check
-    const checkStock = async () => {
-        const qStock = collection(db, "medicines");
+    // 🔥 NEW: Check Stock Health (Expired, Soon, Low)
+    const checkStockHealth = () => {
+        const qStock = query(collection(db, "medicines"));
         const unsubStock = onSnapshot(qStock, (snapshot) => {
-            const lowItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)).filter(item => (item.quantity || 0) < 30); 
-            setLowStockCount(lowItems.length);
-            setLowStockItems(lowItems);
+            let exp = 0;
+            let soon = 0;
+            let low = 0;
+            const today = new Date();
+
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                
+                // Expiry Calculation
+                let diffDays = 999;
+                if (data.expiry) {
+                    const expDate = new Date(data.expiry);
+                    const diffTime = expDate.getTime() - today.getTime();
+                    diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                }
+
+                // Categorize
+                if (diffDays < 0) exp++;
+                else if (diffDays <= 2) soon++; // Next 2 days
+
+                if ((data.quantity || 0) < 30) low++;
+            });
+
+            setExpiredCount(exp);
+            setExpiringSoonCount(soon);
+            setLowStockCount(low);
         });
         return () => unsubStock();
     };
-    checkStock();
+    const unsubStockFunc = checkStockHealth();
 
     // Holidays (Visible to both)
     const qHolidays = query(collection(db, "holidays"), orderBy("date", "asc"));
@@ -129,11 +159,11 @@ export default function AdminDashboard() {
         };
         fetchDoctorImg();
 
-        return () => { unsubRevenue(); unsubMsg(); unsubHolidays(); unsubStaff(); };
+        return () => { unsubRevenue(); unsubMsg(); unsubHolidays(); unsubStaff(); unsubStockFunc(); };
     }
     
     // If Staff, just cleanup common listeners
-    return () => { unsubAppt(); unsubHolidays(); };
+    return () => { unsubAppt(); unsubHolidays(); unsubStockFunc(); };
   }, [userRole]);
 
   // Functions
@@ -173,21 +203,6 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
       <AdminNavbar />
 
-      {/* Low Stock Modal */}
-      {showLowStockModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-fade-in m-4">
-                <div className="bg-red-50 p-4 md:p-6 flex justify-between items-center border-b border-red-100"><h3 className="text-lg md:text-xl font-black text-red-600 flex items-center gap-2">⚠️ Low Stock Alert</h3><button onClick={() => setShowLowStockModal(false)} className="bg-white text-slate-400 hover:text-red-500 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow-sm">✕</button></div>
-                <div className="p-4 md:p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                    {lowStockItems.length === 0 ? <div className="text-center py-10"><span className="text-5xl md:text-6xl mb-4 block">✅</span><h3 className="text-lg font-bold text-slate-700">All Good!</h3></div> : (
-                        <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[300px]"><thead><tr className="bg-slate-100 text-slate-500 text-xs uppercase tracking-wider"><th className="p-3 rounded-l-lg">Item Name</th><th className="p-3 text-right rounded-r-lg">Current Qty</th></tr></thead><tbody>{lowStockItems.map((item, idx) => (<tr key={idx} className="border-b border-slate-50 last:border-none"><td className="p-3 font-bold text-slate-800 text-sm">{item.name}</td><td className="p-3 text-right"><span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold">{item.quantity}</span></td></tr>))}</tbody></table></div>
-                    )}
-                </div>
-                <div className="bg-slate-50 p-4 border-t border-slate-100 text-center"><Link href="/inventory" className="text-blue-600 font-bold text-sm hover:underline">Go to Inventory →</Link></div>
-            </div>
-        </div>
-      )}
-
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-24 md:pt-28 pb-4 flex-1 w-full">
         
         {/* --- HEADER --- */}
@@ -200,7 +215,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto">
-             
              {/* Admin Only: Chat & Profile */}
              {userRole === 'admin' && (
                  <div className="bg-white px-2 py-2 pr-4 rounded-full border border-slate-200 shadow-sm flex items-center gap-4">
@@ -221,7 +235,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* --- KPI STATS (Full View for Both, Revenue Data Hidden for Staff) --- */}
+        {/* --- KPI STATS (Full View) --- */}
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12`}>
             
             {/* Revenue Cards (Visible only to Admin) */}
@@ -230,7 +244,7 @@ export default function AdminDashboard() {
                     <div className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                         <div className="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-green-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-green-100"></div>
                         <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-green-100 text-green-600 rounded-xl text-lg md:text-xl shadow-sm">💰</span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Daily Revenue</h3></div>
+                            <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-green-100 text-green-600 rounded-xl text-lg md:text-xl shadow-sm"><MoneyIcon /></span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Daily Revenue</h3></div>
                             <p className="text-2xl md:text-3xl font-black text-slate-900">Rs. {dailyRevenue.toFixed(2)}</p>
                             <button onClick={downloadDailyReport} className="mt-4 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100 transition flex items-center gap-1">📥 Download Report</button>
                         </div>
@@ -239,7 +253,7 @@ export default function AdminDashboard() {
                     <div className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                         <div className="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-blue-100"></div>
                         <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-blue-100 text-blue-600 rounded-xl text-lg md:text-xl shadow-sm">📈</span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Monthly Revenue</h3></div>
+                            <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-blue-100 text-blue-600 rounded-xl text-lg md:text-xl shadow-sm"><MoneyIcon /></span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Monthly Revenue</h3></div>
                             <p className="text-2xl md:text-3xl font-black text-slate-900">Rs. {monthlyRevenue.toFixed(2)}</p>
                             <p className="text-xs text-slate-400 mt-2 font-medium">This month's earning</p>
                         </div>
@@ -251,24 +265,51 @@ export default function AdminDashboard() {
             <Link href="/admin/appointments" className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                 <div className="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-orange-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-orange-100"></div>
                 <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-orange-100 text-orange-600 rounded-xl text-lg md:text-xl shadow-sm">⏳</span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Queue Status</h3></div>
+                    <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-orange-100 text-orange-600 rounded-xl text-lg md:text-xl shadow-sm"><UserIcon /></span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Queue Status</h3></div>
                     <p className="text-2xl md:text-3xl font-black text-slate-900">{pendingCount}</p>
                     <p className="text-xs text-orange-500 mt-2 font-bold">Patients Waiting Now</p>
                 </div>
             </Link>
 
-            {/* Low Stock (Everyone) */}
-            <div onClick={() => setShowLowStockModal(true)} className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-                <div className="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-red-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-red-100"></div>
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-3"><span className="p-2 md:p-2.5 bg-red-100 text-red-600 rounded-xl text-lg md:text-xl shadow-sm">⚠️</span><h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider">Low Stock</h3></div>
-                    <p className="text-2xl md:text-3xl font-black text-slate-900">{lowStockCount}</p>
-                    <p className="text-xs text-red-500 mt-2 font-bold">Click to view items</p>
+            {/* 🔥 STOCK HEALTH CARD (New Replacement) */}
+            <div 
+                className={`p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-2 cursor-pointer transition transform hover:-translate-y-1 relative overflow-hidden
+                    ${expiredCount > 0 ? 'bg-red-50 border-red-200' : expiringSoonCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}
+                `}
+                onClick={() => router.push('/inventory')}
+            >
+                <div className="absolute top-4 right-4 opacity-10">
+                    <AlertIcon />
+                </div>
+
+                <div className="flex items-center gap-2 mb-3">
+                    <h3 className={`font-bold text-xs uppercase tracking-wider ${expiredCount > 0 ? 'text-red-500' : 'text-slate-500'}`}>Stock Health</h3>
+                </div>
+
+                {/* Status Breakdown */}
+                <div className="space-y-2">
+                    {/* Expired */}
+                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${expiredCount > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}>
+                        <span className="text-xs font-bold flex items-center gap-2">🔴 Expired</span>
+                        <span className="text-lg font-black">{expiredCount}</span>
+                    </div>
+
+                    {/* Expiring Soon */}
+                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${expiringSoonCount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}>
+                        <span className="text-xs font-bold flex items-center gap-2">🟠 Soon</span>
+                        <span className="text-lg font-black">{expiringSoonCount}</span>
+                    </div>
+
+                    {/* Low Stock */}
+                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${lowStockCount > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}>
+                        <span className="text-xs font-bold flex items-center gap-2">🟡 Low</span>
+                        <span className="text-lg font-black">{lowStockCount}</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {/* --- 2. QUICK ACCESS BUTTONS (Visible to All) --- */}
+        {/* --- 2. QUICK ACCESS BUTTONS --- */}
         <h3 className="text-lg font-bold text-slate-800 mb-4 md:mb-5 ml-1">Quick Access</h3>
         <div className={`grid grid-cols-2 md:grid-cols-${userRole === 'admin' ? '4' : '3'} gap-3 md:gap-5 mb-8 md:mb-12`}>
             <Link href="/billing" className="bg-blue-50 border border-blue-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-blue-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-blue-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">🧾</span><span className="font-bold text-blue-900 text-sm md:text-base">New Bill</span></Link>
@@ -281,7 +322,7 @@ export default function AdminDashboard() {
             )}
         </div>
 
-        {/* --- 3. WIDGETS SECTION (Common & Admin Only Mix) --- */}
+        {/* --- 3. WIDGETS SECTION --- */}
         <div className={`grid grid-cols-1 lg:grid-cols-${userRole === 'admin' ? '2' : '1'} gap-6 md:gap-8`}>
             
             {/* Holidays Widget (Visible to All) */}
