@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(true);
 
     // 👇 මෙතනට ඔයාගේ Register වුන Doctor Email එක දාන්න
-    const ALLOWED_DOCTOR_EMAIL = "doctor@dighayu.com"; 
+    const ALLOWED_DOCTOR_EMAIL = "waiseelaka2002@gmail.com"; 
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
