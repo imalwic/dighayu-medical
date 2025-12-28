@@ -77,7 +77,15 @@ export default function AppointmentsPage() {
   const emergencyCount = appointments.filter(app => app.type === 'emergency' || app.type === 'walk-in').length;
   const regularCount = appointments.filter(app => app.type !== 'emergency' && app.type !== 'walk-in').length;
 
-  const openConsultation = (patient: any) => {
+  const openConsultation = async (patient: any) => {
+      // 1. Update Status to 'in_progress' (Triggers Display Board)
+      try {
+          await updateDoc(doc(db, "appointments", patient.id), { status: "in_progress" });
+      } catch (e) {
+          console.error("Error updating status", e);
+      }
+
+      // 2. Open Modal
       setCurrentPatient({ ...patient, isWalkIn: false });
       setPrescribedMeds([]);
       setDiagnosis("");
@@ -147,6 +155,7 @@ export default function AppointmentsPage() {
               appointmentId: currentPatient.id
           });
 
+          // If it was an appointment, mark as completed (removes from display board)
           if (!currentPatient.isWalkIn) {
               await updateDoc(doc(db, "appointments", currentPatient.id), { status: "completed" });
           }

@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-// 🔥 අලුතෙන් sendPasswordResetEmail එකතු කළා
 import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth"; 
 import { auth, db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -22,12 +21,11 @@ export default function LoginPage() {
   const [staffName, setStaffName] = useState("");
   const [staffCode, setStaffCode] = useState("");
 
-  // 🔥 1. HANDLE ADMIN LOGIN (With Security Check)
+  // 🔥 1. HANDLE ADMIN LOGIN
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // 👇 මෙතනට ඔයාගේ Register වුන Doctor Email එක දාන්න
     const ALLOWED_DOCTOR_EMAIL = "waiseelaka2002@gmail.com"; 
 
     try {
@@ -47,7 +45,7 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // 🔥 2. FORGOT PASSWORD FUNCTION (අලුත් කොටස)
+  // 🔥 2. FORGOT PASSWORD FUNCTION
   const handleForgotPassword = async () => {
     if (!email) {
       alert("කරුණාකර පළමුව ඔබේ Email ලිපිනය ඇතුළත් කරන්න! 📧");
@@ -62,10 +60,19 @@ export default function LoginPage() {
     }
   };
 
-  // 🔥 3. HANDLE STAFF LOGIN
+  // 🔥 3. HANDLE STAFF / DISPLAY LOGIN (Updated Logic)
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // 👇 DISPLAY DASHBOARD LOGIN (Hardcoded Check)
+    if (staffName.toLowerCase() === "display" && staffCode === "9999") {
+        setLoading(false);
+        router.push("/display"); // Redirect to Display Page
+        return;
+    }
+
+    // Normal Staff Login
     try {
       const q = query(
         collection(db, "staff_access"),
@@ -112,7 +119,7 @@ export default function LoginPage() {
             onClick={() => setMode("staff")}
             className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === "staff" ? "bg-green-600 text-white shadow-md" : "text-slate-500 hover:text-slate-700"}`}
           >
-            Staff Member
+            Staff / Display
           </button>
         </div>
 
@@ -143,7 +150,7 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* 🔥 Forgot Password Button (අලුත් කොටස) */}
+            {/* Forgot Password Button */}
             <div className="text-right">
               <button 
                 type="button"
@@ -163,16 +170,16 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* --- STAFF LOGIN FORM --- */}
+        {/* --- STAFF / DISPLAY LOGIN FORM --- */}
         {mode === "staff" && (
           <form onSubmit={handleStaffLogin} className="space-y-4 animate-fade-in">
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Your Name</label>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Name / Display ID</label>
               <input 
                 type="text" 
                 required 
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-green-500 focus:bg-white transition text-sm font-bold text-slate-800"
-                placeholder="Ex: Nimal"
+                placeholder="Ex: Nimal OR display"
                 value={staffName}
                 onChange={(e) => setStaffName(e.target.value)}
               />
@@ -192,7 +199,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 transition active:scale-95 disabled:opacity-50 mt-2"
             >
-              {loading ? "Verifying..." : "Login as Staff"}
+              {loading ? "Verifying..." : "Login"}
             </button>
           </form>
         )}
