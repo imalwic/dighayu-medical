@@ -271,7 +271,7 @@ export default function AdminDashboard() {
                 </div>
             </Link>
 
-            {/* 🔥 STOCK HEALTH CARD (New Replacement) */}
+            {/* 🔥 STOCK HEALTH CARD */}
             <div 
                 className={`p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-2 cursor-pointer transition transform hover:-translate-y-1 relative overflow-hidden
                     ${expiredCount > 0 ? 'bg-red-50 border-red-200' : expiringSoonCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}
@@ -309,17 +309,32 @@ export default function AdminDashboard() {
             </div>
         </div>
 
-        {/* --- 2. QUICK ACCESS BUTTONS --- */}
+        {/* --- 2. QUICK ACCESS BUTTONS (ADDED SMS HERE) --- */}
         <h3 className="text-lg font-bold text-slate-800 mb-4 md:mb-5 ml-1">Quick Access</h3>
-        <div className={`grid grid-cols-2 md:grid-cols-${userRole === 'admin' ? '4' : '3'} gap-3 md:gap-5 mb-8 md:mb-12`}>
+        <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-${userRole === 'admin' ? '5' : '3'} gap-3 md:gap-5 mb-8 md:mb-12`}>
+            
+            {/* 1. New Bill */}
             <Link href="/billing" className="bg-blue-50 border border-blue-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-blue-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-blue-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">🧾</span><span className="font-bold text-blue-900 text-sm md:text-base">New Bill</span></Link>
+            
+            {/* 2. Inventory */}
             <Link href="/inventory" className="bg-emerald-50 border border-emerald-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-emerald-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-emerald-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">💊</span><span className="font-bold text-emerald-900 text-sm md:text-base">Inventory</span></Link>
+            
+            {/* 3. Appointments */}
             <Link href="/admin/appointments" className="bg-violet-50 border border-violet-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-violet-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-violet-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">🗓️</span><span className="font-bold text-violet-900 text-sm md:text-base">Appointments</span></Link>
             
-            {/* Reports (Admin Only) */}
+            {/* 4. Reports (Admin Only) */}
             {userRole === 'admin' && (
                 <Link href="/sales" className="bg-orange-50 border border-orange-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-orange-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-orange-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">📊</span><span className="font-bold text-orange-900 text-sm md:text-base">Reports</span></Link>
             )}
+
+            {/* 5. 🔥 SMS BUTTON (Added Here) */}
+            {userRole === 'admin' && (
+                <Link href="/admin/sms" className="bg-rose-50 border border-rose-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-rose-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group">
+                    <span className="text-2xl md:text-3xl bg-white text-rose-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">📲</span>
+                    <span className="font-bold text-rose-900 text-sm md:text-base">SMS</span>
+                </Link>
+            )}
+
         </div>
 
         {/* --- 3. WIDGETS SECTION --- */}
