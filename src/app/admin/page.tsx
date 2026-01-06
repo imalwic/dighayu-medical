@@ -11,7 +11,7 @@ import autoTable from 'jspdf-autotable';
 import AdminNavbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-// --- Icons (New SVG Icons for better look) ---
+// --- Icons ---
 const MoneyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const AlertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
@@ -31,12 +31,12 @@ export default function AdminDashboard() {
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
-  // 🔥 NEW STOCK ALERT STATES
+  // Stock Alert States
   const [expiredCount, setExpiredCount] = useState(0);
   const [expiringSoonCount, setExpiringSoonCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
 
-  // Admin Features (Holidays, Staff)
+  // Admin Features
   const [holidayDate, setHolidayDate] = useState("");
   const [holidayType, setHolidayType] = useState("poya"); 
   const [holidaySession, setHolidaySession] = useState("full"); 
@@ -75,53 +75,41 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!userRole) return;
 
-    // --- COMMON DATA (For Both Admin & Staff) ---
-    // Pending Appointments
+    // --- COMMON DATA ---
     const qAppt = query(collection(db, "appointments"), where("status", "==", "pending"));
     const unsubAppt = onSnapshot(qAppt, (snap) => setPendingCount(snap.size));
     
-    // 🔥 NEW: Check Stock Health (Expired, Soon, Low)
+    // Check Stock Health
     const checkStockHealth = () => {
         const qStock = query(collection(db, "medicines"));
         const unsubStock = onSnapshot(qStock, (snapshot) => {
-            let exp = 0;
-            let soon = 0;
-            let low = 0;
+            let exp = 0; let soon = 0; let low = 0;
             const today = new Date();
 
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
-                
-                // Expiry Calculation
                 let diffDays = 999;
                 if (data.expiry) {
                     const expDate = new Date(data.expiry);
                     const diffTime = expDate.getTime() - today.getTime();
                     diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 }
-
-                // Categorize
                 if (diffDays < 0) exp++;
-                else if (diffDays <= 2) soon++; // Next 2 days
-
+                else if (diffDays <= 2) soon++;
                 if ((data.quantity || 0) < 30) low++;
             });
-
-            setExpiredCount(exp);
-            setExpiringSoonCount(soon);
-            setLowStockCount(low);
+            setExpiredCount(exp); setExpiringSoonCount(soon); setLowStockCount(low);
         });
         return () => unsubStock();
     };
     const unsubStockFunc = checkStockHealth();
 
-    // Holidays (Visible to both)
+    // Holidays
     const qHolidays = query(collection(db, "holidays"), orderBy("date", "asc"));
     const unsubHolidays = onSnapshot(qHolidays, (snap) => setHolidaysList(snap.docs.map(d => ({id: d.id, ...d.data()}))));
 
     // --- ADMIN ONLY DATA ---
     if (userRole === "admin") {
-        // Revenue
         const qRevenue = query(collection(db, "pharmacy_orders"), where("status", "==", "completed"));
         const unsubRevenue = onSnapshot(qRevenue, (snapshot) => {
             let dayTotal = 0; let monthTotal = 0; let todaysList: any[] = [];
@@ -139,7 +127,6 @@ export default function AdminDashboard() {
             setDailyRevenue(dayTotal); setMonthlyRevenue(monthTotal); setTodayOrders(todaysList);
         });
 
-        // Chats
         const qMsg = query(collection(db, "messages"), where("sender", "==", "patient"), where("read", "==", false));
         const unsubMsg = onSnapshot(qMsg, (snapshot) => {
             const uniquePatients = new Set();
@@ -147,11 +134,9 @@ export default function AdminDashboard() {
             setUnreadChatCount(uniquePatients.size);
         });
 
-        // Staff Management
         const qStaff = query(collection(db, "staff_access"));
         const unsubStaff = onSnapshot(qStaff, (snap) => setStaffList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
 
-        // Doctor Image
         const fetchDoctorImg = async () => {
             const docRef = doc(db, "settings", "doctorProfile");
             const docSnap = await getDoc(docRef);
@@ -162,7 +147,6 @@ export default function AdminDashboard() {
         return () => { unsubRevenue(); unsubMsg(); unsubHolidays(); unsubStaff(); unsubStockFunc(); };
     }
     
-    // If Staff, just cleanup common listeners
     return () => { unsubAppt(); unsubHolidays(); unsubStockFunc(); };
   }, [userRole]);
 
@@ -215,7 +199,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto">
-             {/* Admin Only: Chat & Profile */}
              {userRole === 'admin' && (
                  <div className="bg-white px-2 py-2 pr-4 rounded-full border border-slate-200 shadow-sm flex items-center gap-4">
                     <div className="relative group w-12 h-12 rounded-full overflow-hidden border-2 border-slate-100">
@@ -235,10 +218,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* --- KPI STATS (Full View) --- */}
+        {/* --- KPI STATS --- */}
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12`}>
-            
-            {/* Revenue Cards (Visible only to Admin) */}
             {userRole === 'admin' && (
                 <>
                     <div className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
@@ -261,7 +242,6 @@ export default function AdminDashboard() {
                 </>
             )}
 
-            {/* Queue Status (Everyone) */}
             <Link href="/admin/appointments" className="bg-white p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                 <div className="absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 bg-orange-50 rounded-bl-full -mr-4 -mt-4 transition-all group-hover:bg-orange-100"></div>
                 <div className="relative z-10">
@@ -271,47 +251,25 @@ export default function AdminDashboard() {
                 </div>
             </Link>
 
-            {/* 🔥 STOCK HEALTH CARD */}
             <div 
                 className={`p-5 md:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-2 cursor-pointer transition transform hover:-translate-y-1 relative overflow-hidden
                     ${expiredCount > 0 ? 'bg-red-50 border-red-200' : expiringSoonCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-100'}
                 `}
                 onClick={() => router.push('/inventory')}
             >
-                <div className="absolute top-4 right-4 opacity-10">
-                    <AlertIcon />
-                </div>
-
-                <div className="flex items-center gap-2 mb-3">
-                    <h3 className={`font-bold text-xs uppercase tracking-wider ${expiredCount > 0 ? 'text-red-500' : 'text-slate-500'}`}>Stock Health</h3>
-                </div>
-
-                {/* Status Breakdown */}
+                <div className="absolute top-4 right-4 opacity-10"><AlertIcon /></div>
+                <div className="flex items-center gap-2 mb-3"><h3 className={`font-bold text-xs uppercase tracking-wider ${expiredCount > 0 ? 'text-red-500' : 'text-slate-500'}`}>Stock Health</h3></div>
                 <div className="space-y-2">
-                    {/* Expired */}
-                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${expiredCount > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}>
-                        <span className="text-xs font-bold flex items-center gap-2">🔴 Expired</span>
-                        <span className="text-lg font-black">{expiredCount}</span>
-                    </div>
-
-                    {/* Expiring Soon */}
-                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${expiringSoonCount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}>
-                        <span className="text-xs font-bold flex items-center gap-2">🟠 Soon</span>
-                        <span className="text-lg font-black">{expiringSoonCount}</span>
-                    </div>
-
-                    {/* Low Stock */}
-                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${lowStockCount > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}>
-                        <span className="text-xs font-bold flex items-center gap-2">🟡 Low</span>
-                        <span className="text-lg font-black">{lowStockCount}</span>
-                    </div>
+                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${expiredCount > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}><span className="text-xs font-bold flex items-center gap-2">🔴 Expired</span><span className="text-lg font-black">{expiredCount}</span></div>
+                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${expiringSoonCount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}><span className="text-xs font-bold flex items-center gap-2">🟠 Soon</span><span className="text-lg font-black">{expiringSoonCount}</span></div>
+                    <div className={`flex justify-between items-center p-1.5 rounded-lg ${lowStockCount > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-50 text-slate-400 opacity-60'}`}><span className="text-xs font-bold flex items-center gap-2">🟡 Low</span><span className="text-lg font-black">{lowStockCount}</span></div>
                 </div>
             </div>
         </div>
 
-        {/* --- 2. QUICK ACCESS BUTTONS (ADDED SMS HERE) --- */}
+        {/* --- 2. QUICK ACCESS BUTTONS (Added "Patients" Here) --- */}
         <h3 className="text-lg font-bold text-slate-800 mb-4 md:mb-5 ml-1">Quick Access</h3>
-        <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-${userRole === 'admin' ? '5' : '3'} gap-3 md:gap-5 mb-8 md:mb-12`}>
+        <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-5 mb-8 md:mb-12`}>
             
             {/* 1. New Bill */}
             <Link href="/billing" className="bg-blue-50 border border-blue-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-blue-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-blue-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">🧾</span><span className="font-bold text-blue-900 text-sm md:text-base">New Bill</span></Link>
@@ -327,11 +285,19 @@ export default function AdminDashboard() {
                 <Link href="/sales" className="bg-orange-50 border border-orange-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-orange-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-orange-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">📊</span><span className="font-bold text-orange-900 text-sm md:text-base">Reports</span></Link>
             )}
 
-            {/* 5. 🔥 SMS BUTTON (Added Here) */}
+            {/* 5. SMS (Admin Only) */}
             {userRole === 'admin' && (
                 <Link href="/admin/sms" className="bg-rose-50 border border-rose-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-rose-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group">
                     <span className="text-2xl md:text-3xl bg-white text-rose-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">📲</span>
                     <span className="font-bold text-rose-900 text-sm md:text-base">SMS</span>
+                </Link>
+            )}
+
+            {/* 6. MANAGE PATIENTS (Admin Only) - NEW ADDITION 🔥 */}
+            {userRole === 'admin' && (
+                <Link href="/patient" className="bg-cyan-50 border border-cyan-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-cyan-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group">
+                    <span className="text-2xl md:text-3xl bg-white text-cyan-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300">👥</span>
+                    <span className="font-bold text-cyan-900 text-sm md:text-base">Patient</span>
                 </Link>
             )}
 
@@ -340,11 +306,10 @@ export default function AdminDashboard() {
         {/* --- 3. WIDGETS SECTION --- */}
         <div className={`grid grid-cols-1 lg:grid-cols-${userRole === 'admin' ? '2' : '1'} gap-6 md:gap-8`}>
             
-            {/* Holidays Widget (Visible to All) */}
+            {/* Holidays Widget */}
             <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-slate-200 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-6"><h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-3"><span className="bg-slate-100 p-2 rounded-xl text-lg md:text-xl">📅</span> Holidays</h3></div>
                 
-                {/* Add Holiday Button (Admin Only) */}
                 {userRole === 'admin' && (
                     <div className="bg-slate-50 p-2 rounded-2xl border border-slate-200 flex flex-wrap items-center gap-2 mb-6">
                         <input type="date" className="flex-1 min-w-[120px] bg-white p-2.5 md:p-3 rounded-xl border-none text-xs md:text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100" value={holidayDate} onChange={e => setHolidayDate(e.target.value)} />
@@ -359,7 +324,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Staff Widget (Admin Only) */}
+            {/* Staff Widget */}
             {userRole === 'admin' && (
                 <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-slate-200 h-full flex flex-col relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-40 h-40 bg-blue-50 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>

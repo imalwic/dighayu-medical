@@ -15,9 +15,6 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Build එකේදී එන පොඩි පොඩි Error ගණන් ගන්න එපා කියමු
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
