@@ -15,8 +15,11 @@ export default function SMSPage() {
   const [sentBatches, setSentBatches] = useState<number[]>([]); 
   const [sentMessages, setSentMessages] = useState<any[]>([]);
 
-  // එක පාරකට යවන ගණන (Phone එක හිර නොවෙන්න 50 හොඳයි)
+  // එක පාරකට යවන ගණන
   const BATCH_SIZE = 50; 
+
+  // 🔥 BRANDING SIGNATURE (මෙතන වෙනස් කරන්න පුළුවන්)
+  const SIGNATURE = " - දීඝායු MEDICAL CENTER";
 
   useEffect(() => {
     const fetchAllContacts = async () => {
@@ -64,16 +67,20 @@ export default function SMSPage() {
   const handleSendBatch = async (batchNumbers: string[], batchIndex: number) => {
     if (!message) return alert("Please type a message first!");
 
+    // 🔥 AUTOMATIC SIGNATURE ADDING
+    // මෙතනදී අපි ඔයා Type කරන Message එකට අර නම එකතු කරනවා
+    const fullMessage = `${message}\n\n${SIGNATURE}`;
+
     // නම්බර්ස් කොමා වලින් වෙන් කිරීම
     const numbersString = batchNumbers.join(',');
 
-    // කෙලින්ම Phone එකේ SMS App එකට Link එක හදනවා
-    const smsLink = `sms:${numbersString}?body=${encodeURIComponent(message)}`;
+    // SMS Link එක හැදීම (Full Message එකත් එක්ක)
+    const smsLink = `sms:${numbersString}?body=${encodeURIComponent(fullMessage)}`;
 
-    // Database Log
+    // Database Log (Database එකේ සේව් වෙන්නෙත් ෆුල් මැසේජ් එකමයි)
     await addDoc(collection(db, "sms_logs"), {
         to: `Batch ${batchIndex + 1} (${batchNumbers.length} people)`,
-        message: message,
+        message: fullMessage,
         status: "Opened in App",
         senderID: "My Phone",
         type: "Direct Batch",
@@ -86,7 +93,6 @@ export default function SMSPage() {
     window.location.href = smsLink;
   };
 
-  // Divide numbers into batches
   const batches = [];
   for (let i = 0; i < recipientNumbers.length; i += BATCH_SIZE) {
     batches.push(recipientNumbers.slice(i, i + BATCH_SIZE));
@@ -102,7 +108,7 @@ export default function SMSPage() {
             <button onClick={() => router.back()} className="self-start text-slate-500 hover:text-slate-800 text-sm font-bold bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition">← Back</button>
             <div className="flex-1">
                 <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Direct SMS Sender</h1>
-                <p className="text-slate-500 text-sm font-medium mt-1">Send directly from your Phone (No PC needed)</p>
+                <p className="text-slate-500 text-sm font-medium mt-1">Send directly from your Phone (Auto-Signature Included)</p>
             </div>
         </div>
 
@@ -120,7 +126,7 @@ export default function SMSPage() {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 relative">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Message</label>
                     <textarea 
                         rows={4}
@@ -129,6 +135,14 @@ export default function SMSPage() {
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                     ></textarea>
+                    
+                    {/* Preview of the signature */}
+                    <div className="mt-3 text-right">
+                        <span className="text-xs font-bold text-slate-400">Auto appended:</span>
+                        <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded ml-2">
+                             {SIGNATURE}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Batch Buttons */}
@@ -177,7 +191,7 @@ export default function SMSPage() {
                                 <span className="font-bold text-slate-900 text-sm">{msg.to}</span>
                                 <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-1 rounded font-bold">Manual</span>
                             </div>
-                            <p className="text-xs text-slate-500 mt-2">{msg.message}</p>
+                            <p className="text-xs text-slate-500 mt-2 whitespace-pre-line">{msg.message}</p>
                             <p className="text-[10px] text-slate-400 text-right mt-1">{msg.createdAt?.toDate().toLocaleString()}</p>
                         </div>
                     ))}
