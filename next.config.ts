@@ -14,6 +14,9 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: '.',
+  },
   // Build එකේදී එන පොඩි පොඩි Error ගණන් ගන්න එපා කියමු
   typescript: {
     ignoreBuildErrors: true,
