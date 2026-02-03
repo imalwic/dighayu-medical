@@ -3,40 +3,50 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { to, message } = body; // 'to' කියන්නේ මෙතන කොමා වලින් වෙන් කළ නම්බර්ස් ගොඩක්
+    const { to, message } = body;
 
     // 👇 ඔබේ විස්තර
     const USER_ID = "30935"; 
     const API_KEY = "8edcMQXLgiYFolVwIsOw"; 
     const SENDER_ID = "NotifyDEMO"; // අනුමත Sender ID එකක් ලැබුනම මෙතන වෙනස් කරන්න
 
-    // 1. නම්බර්ස් ලිස්ට් එක Array එකක් කරගැනීම
+    // 1. Frontend එකෙන් එන නම්බර්ස් වෙන් කරගැනීම
     const phoneNumbers = to.split(',');
 
-    console.log(`Starting Bulk SMS. Total: ${phoneNumbers.length}`);
+    console.log(`Starting Bulk SMS (Unicode Supported). Total: ${phoneNumbers.length}`);
 
-    // 2. හැම නම්බර් එකකටම වෙන වෙනම Request යැවීම (Parallel Sending)
-    // මේකෙන් එක පාර ගොඩක් යවන්න පුළුවන් Error එන්නේ නැතුව.
+    // 2. එක් එක් නම්බර් එකට වෙන වෙනම යැවීම (POST Method එක මගින්)
     const promises = phoneNumbers.map(async (number: string) => {
         const cleanNumber = number.trim();
         
-        // නම්බර් එක හරියටම 94xxxxxxxxx (අංක 11) ද බලන්න. නැත්නම් යවන්න එපා.
         if (cleanNumber.length !== 11) return null; 
 
-        const url = `https://app.notify.lk/api/v1/send?user_id=${USER_ID}&api_key=${API_KEY}&sender_id=${SENDER_ID}&to=${cleanNumber}&message=${encodeURIComponent(message)}`;
-        
+        // 🔥 වෙනස: අපි දැන් URL එකේ අමුණන්නේ නෑ. FormData පාවිච්චි කරනවා.
+        // මෙමගින් සිංහල අකුරු (Unicode) ආරක්ෂා වෙනවා.
+        const formData = new URLSearchParams();
+        formData.append('user_id', USER_ID);
+        formData.append('api_key', API_KEY);
+        formData.append('sender_id', SENDER_ID);
+        formData.append('to', cleanNumber);
+        formData.append('message', message);
+
         try {
-            const res = await fetch(url);
+            // Notify.lk වෙත POST Request එකක් ලෙස යැවීම
+            const res = await fetch('https://app.notify.lk/api/v1/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString()
+            });
             return await res.json();
         } catch (e) {
             return { status: "error", number: cleanNumber };
         }
     });
 
-    // සියලුම මැසේජ් යවා අවසන් වනතුරු රැඳී සිටීම
     const results = await Promise.all(promises);
 
-    // සාර්ථක වූ ගණන බැලීම
     const successCount = results.filter((r: any) => r && r.status === "success").length;
 
     return NextResponse.json({ 
