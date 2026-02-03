@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
     // --- Notify.lk Configuration ---
     const USER_ID = "30935"; // Notify.lk එකෙන් ලැබෙන User ID එක මෙතන දාන්න
-    const API_KEY = "M2c7zZxe1RV5CMoWoVLO"; // Notify.lk එකෙන් ලැබෙන API Key එක මෙතන දාන්න
+    const API_KEY = "8edcMQXLgiYFolVwIsOw"; // Notify.lk එකෙන් ලැබෙන API Key එක මෙතන දාන්න
     const SENDER_ID = "NotifyDEMO"; // අනුමත කරගත් Sender ID එක (නැත්නම් NotifyDEMO තියන්න)
 
     // Notify.lk වෙත යවන API Request එක
