@@ -62,7 +62,19 @@ export default function PatientPage() {
             allPatients = [...allPatients, ...autoData];
         } catch (e) { console.log("Error fetching patients:", e); }
 
-        setPatients(allPatients);
+        // Filter unique by phone number
+        const uniqueMap = new Map();
+        allPatients.forEach(p => {
+             const phone = (p.phone || "").toString().replace(/\s/g, "");
+             if (phone && phone !== "-" && phone !== "undefined") {
+                 // Keep only the first occurrence (latest)
+                 if (!uniqueMap.has(phone)) uniqueMap.set(phone, p);
+             } else {
+                 uniqueMap.set(p.id, p);
+             }
+        });
+        
+        setPatients(Array.from(uniqueMap.values()));
       } catch (error) {
         console.error("Global Error:", error);
       } finally {
@@ -77,6 +89,12 @@ export default function PatientPage() {
   const handleAddPatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newPhone) return alert("Please enter Name and Phone!");
+
+    const cleanedPhone = newPhone.replace(/\s/g, "");
+    const exists = patients.some(p => (p.phone || "").toString().replace(/\s/g, "") === cleanedPhone);
+    if (exists) {
+        return alert("This phone number is already registered!");
+    }
 
     setAdding(true);
     try {
