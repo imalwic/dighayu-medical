@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, runTransaction, serverTimestamp, addDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import StripeCheckout from "@/components/StripeCheckout";
+import Receipt from "@/components/Receipt";
 import AdminNavbar from "@/components/Navbar";
 import { LuBanknote, LuReceipt, LuPill, LuUser } from "react-icons/lu";
 
@@ -62,6 +64,7 @@ export default function BillingPage() {
   const [balance, setBalance] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [refNumber, setRefNumber] = useState("");
+  const [lastReceiptData, setLastReceiptData] = useState<any>(null);
 
   // Mobile View State
   const [activeTab, setActiveTab] = useState<'billing' | 'queue'>('billing');
@@ -191,53 +194,17 @@ export default function BillingPage() {
     setCart(cart.filter((c) => c.id !== id));
   };
 
-  // PDF & Payment
+  // Payment
   const handleDownloadAndPay = () => {
     if (cart.length === 0 && doctorCharge === 0) return alert("Bill is empty!");
     
-    const pdf = new jsPDF();
-    pdf.setFontSize(20);
-    pdf.text("Dighayu Medical Center", 105, 20, { align: "center" });
-    pdf.setFontSize(10);
-    pdf.text("Embilipitiya Road, Padhalangala. | Tel: 074 387 7234", 105, 26, { align: "center" });
-    pdf.line(10, 30, 200, 30); 
-
-    pdf.setFontSize(11);
-    pdf.text(`Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 40);
-    pdf.text(`Patient: ${selectedOrder ? selectedOrder.patientName : "Walk-in Customer"}`, 14, 46);
-
-    const tableRows = cart.map(item => {
-        let dose = "";
-        if(item.dosage) {
-            dose += item.dosage.morning ? "1-" : "0-";
-            dose += item.dosage.noon ? "1-" : "0-";
-            dose += item.dosage.evening ? "1-" : "0-";
-            dose += item.dosage.night ? "1" : "0";
-            dose += ` (${item.dosage.timing})`;
-            dose += ` [${item.doseAmount} tab x ${item.days} Days]`;
-        }
-        return [item.name, dose, item.price.toFixed(2), item.qty, (item.price * item.qty).toFixed(2)];
-    });
-    
-    if (doctorCharge > 0) {
-        tableRows.push(["Professional Charges", "-", "-", "-", doctorCharge.toFixed(2)]);
-    }
-
-    autoTable(pdf, {
-        head: [["Item", "Instructions", "Price", "Qty", "Amount"]],
-        body: tableRows,
-        startY: 55,
-        theme: 'grid',
-        foot: [['', '', '', 'TOTAL:', `Rs. ${total.toFixed(2)}`]],
-        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'right' }
-    });
-
-    pdf.save(`invoice_${Date.now()}.pdf`);
+    // We no longer download a PDF here.
+    // Instead, we just show the payment modal. The thermal receipt prints AFTER payment.
     setShowPayment(true);
   };
 
   // Transaction
-  const finishTransaction = async () => {
+  const finishTransaction = async (overrideRef?: string) => {
     try {
         await runTransaction(db, async (transaction) => {
             const reads = [];
@@ -269,7 +236,7 @@ export default function BillingPage() {
             type: selectedOrder ? "prescription" : "manual_sale",
             patientName: selectedOrder ? selectedOrder.patientName : "Walk-in Customer",
             paymentMethod: paymentMethod,
-            referenceNumber: paymentMethod === 'Cash' ? '' : refNumber
+            referenceNumber: paymentMethod === 'Cash' ? '' : (overrideRef || refNumber)
         };
 
         if (selectedOrder) {
@@ -278,9 +245,22 @@ export default function BillingPage() {
             await addDoc(collection(db, "pharmacy_orders"), orderData);
         }
         
+        // Store receipt data to print it
+        setLastReceiptData({
+            items: [...cart],
+            doctorCharge,
+            totalAmount: total,
+            patientName: selectedOrder ? selectedOrder.patientName : "Walk-in Customer",
+            paymentMethod,
+            date: new Date()
+        });
+
         // alert("Transaction Completed! ✅"); // Optional: Removed alert for smoother UX
         setCart([]); setDoctorCharge(0); setSelectedOrder(null); setShowPayment(false); 
         setCashGiven(""); setRefNumber(""); setPaymentMethod('Cash'); 
+        
+        // Trigger print after state updates
+        setTimeout(() => window.print(), 500);
     } catch (e: any) { 
         alert("Transaction Failed: " + e.message); 
     }
@@ -330,6 +310,12 @@ export default function BillingPage() {
                             <span className="text-3xl font-black">Rs. {balance.toFixed(2)}</span>
                         </div>
                     </div>
+                ) : paymentMethod === 'Card' ? (
+                    <StripeCheckout 
+                        amount={total} 
+                        onSuccess={(intentId) => finishTransaction(intentId)} 
+                        onCancel={() => setShowPayment(false)} 
+                    />
                 ) : (
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Reference / Transaction ID</label>
@@ -339,12 +325,14 @@ export default function BillingPage() {
                 )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-slate-100 bg-slate-50">
-                <button onClick={finishTransaction} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl font-bold text-xl shadow-lg hover:shadow-blue-300/50 transition transform active:scale-[0.98] flex justify-center items-center gap-2">
-                    Complete Sale <CheckIcon />
-                </button>
-            </div>
+            {/* Modal Footer (Hidden for Card because Stripe Checkout provides its own Pay button) */}
+            {paymentMethod !== 'Card' && (
+                <div className="p-6 border-t border-slate-100 bg-slate-50">
+                    <button onClick={() => finishTransaction()} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl font-bold text-xl shadow-lg hover:shadow-blue-300/50 transition transform active:scale-[0.98] flex justify-center items-center gap-2">
+                        Complete Sale <CheckIcon />
+                    </button>
+                </div>
+            )}
           </div>
         </div>
       )}
@@ -528,6 +516,9 @@ export default function BillingPage() {
         </div>
 
       </div>
+
+      {/* Hidden Receipt for Printing */}
+      <Receipt data={lastReceiptData} />
     </div>
   );
 }
