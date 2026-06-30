@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot, writeBatch, updateDoc } from 'firebase/firestore';
 import AdminNavbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { LuHistory } from "react-icons/lu";
+import { LuHistory, LuLoader } from "react-icons/lu";
 import { useRouter } from 'next/navigation';
 
 // --- Icons ---
@@ -22,6 +22,7 @@ export default function SMSPage() {
   const [sentBatches, setSentBatches] = useState<number[]>([]); 
   const [sentMessages, setSentMessages] = useState<any[]>([]);
   const [clearing, setClearing] = useState(false);
+  const [sendingBatch, setSendingBatch] = useState<number | null>(null);
 
   // එක පාරකට යවන ගණන (100 දක්වා වැඩි කළා)
   const BATCH_SIZE = 100; 
@@ -100,13 +101,15 @@ export default function SMSPage() {
   // Send Logic
   const handleSendBatch = async (batchNumbers: string[], batchIndex: number) => {
     if (!message) return alert("Please type a message first!");
+    if (sendingBatch !== null) return alert("Please wait until the current batch finishes!");
 
+    setSendingBatch(batchIndex);
     const fullMessage = `${message}\n\n${SIGNATURE}`;
     const numbersString = batchNumbers.join(',');
     
     // Frontend එකෙන් API එකට යවනවා
     // API එකෙන් තමයි Notify.lk එකට එකින් එක යවන්නේ
-    await addDoc(collection(db, "sms_logs"), {
+    const logRef = await addDoc(collection(db, "sms_logs"), {
         to: `Batch ${batchIndex + 1} (${batchNumbers.length} people)`,
         message: fullMessage,
         status: "Sending...",
@@ -128,14 +131,19 @@ export default function SMSPage() {
         const result = await response.json();
         
         if(result.success) {
+            await updateDoc(logRef, { status: "Sent" });
             alert(`Batch ${batchIndex + 1} Sent Successfully!`);
             setSentBatches(prev => [...prev, batchIndex]);
         } else {
+            await updateDoc(logRef, { status: "Failed", error: result.error });
             alert("Error sending batch: " + result.error);
         }
 
     } catch (e) {
+        await updateDoc(logRef, { status: "Failed", error: "Network Error" });
         alert("Network Error");
+    } finally {
+        setSendingBatch(null);
     }
   };
 
@@ -221,9 +229,12 @@ export default function SMSPage() {
                                     <button 
                                         key={index}
                                         onClick={() => handleSendBatch(batch, index)}
+                                        disabled={isSent || sendingBatch === index}
                                         className={`p-5 rounded-2xl border-2 text-left transition-all relative overflow-hidden group
                                             ${isSent 
                                                 ? 'bg-green-50 border-green-200 text-green-700 shadow-none' 
+                                                : sendingBatch === index
+                                                ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-inner'
                                                 : 'bg-white border-slate-100 hover:border-blue-400 hover:shadow-md hover:-translate-y-1'
                                             }
                                         `}
@@ -232,6 +243,8 @@ export default function SMSPage() {
                                             <span className="font-black text-lg">Batch {index + 1}</span>
                                             {isSent ? (
                                                 <span className="bg-green-200 text-green-700 p-1 rounded-full"><CheckIcon /></span>
+                                            ) : sendingBatch === index ? (
+                                                <span className="bg-blue-200 text-blue-700 p-1 rounded-full"><LuLoader className="animate-spin" /></span>
                                             ) : (
                                                 <span className="bg-slate-100 text-slate-400 p-1 rounded-full group-hover:bg-blue-100 group-hover:text-blue-500 transition-colors">
                                                     <SendIcon />
@@ -263,8 +276,13 @@ export default function SMSPage() {
                     {sentMessages.map((msg) => (
                         <div key={msg.id} className="p-4 border border-slate-100 rounded-2xl bg-slate-50">
                             <div className="flex justify-between items-start mb-2">
-                                <span className="font-bold text-slate-900 text-xs bg-white px-2 py-1 rounded-lg border border-slate-100">{msg.to}</span>
-                                <p className="text-[10px] text-slate-400 font-mono">{msg.createdAt?.toDate().toLocaleDateString()}</p>
+                                <span className="font-bold text-slate-900 text-xs bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">{msg.to}</span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${msg.status === 'Sent' ? 'bg-green-100 text-green-700 border-green-200' : msg.status === 'Sending...' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                                        {msg.status || 'Unknown'}
+                                    </span>
+                                    <p className="text-[10px] text-slate-400 font-mono">{msg.createdAt?.toDate().toLocaleDateString()} {msg.createdAt?.toDate().toLocaleTimeString()}</p>
+                                </div>
                             </div>
                             <p className="text-xs text-slate-600 whitespace-pre-line">{msg.message}</p>
                         </div>
