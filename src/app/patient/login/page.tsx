@@ -6,6 +6,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaEye, FaEyeSlash } from "react-icons/fa"; 
+import { LuTriangleAlert } from "react-icons/lu";
 
 export default function PatientLogin() {
   const router = useRouter();
@@ -49,8 +50,8 @@ export default function PatientLogin() {
 
         {/* 🔥 Error Message එක පෙන්වන තැන */}
         {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold mb-4 text-center border border-red-200">
-                ⚠️ {error}
+            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold mb-4 flex items-center justify-center gap-2 border border-red-200">
+                <LuTriangleAlert /> {error}
             </div>
         )}
 

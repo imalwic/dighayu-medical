@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { Noto_Sans_Sinhala, Poppins, Inter } from "next/font/google";
 import SeasonalEffects from "@/components/SeasonalEffects"; 
 import Footer from "@/components/Footer"; 
+import { LuLock, LuMessageSquare, LuHospital, LuHand, LuArrowDown, LuTriangleAlert, LuMoon, LuBan, LuClock, LuPhone } from "react-icons/lu";
 
 const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["400", "600", "700", "900"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700", "900"] });
@@ -159,8 +160,7 @@ export default function PublicBooking() {
           const prefix = selectedDate === todayStr ? "අද" : "හෙට";
           setHolidayAlert({ 
               type: data.type, 
-              session: data.session || 'full', 
-              message: data.type === "poya" ? `🌕 ${prefix} පොහොය දින නිවාඩු වේ.` : `🔴 ${prefix} දින වෛද්‍ය මධ්‍යස්ථානය වසා ඇත.` 
+              message: data.type === "poya" ? `[Poya] ${prefix} පොහොය දින නිවාඩු වේ.` : `[Closed] ${prefix} දින වෛද්‍ය මධ්‍යස්ථානය වසා ඇත.` 
           });
        }
     };
@@ -203,7 +203,7 @@ export default function PublicBooking() {
         userId: currentUser.uid 
       });
 
-      alert(`Booking Confirmed! \n📅 ${selectedSlot.session} Session \n🔢 Number: ${selectedSlot.number}`);
+      alert(`Booking Confirmed! \nSession: ${selectedSlot.session} \nNumber: ${selectedSlot.number}`);
       setSelectedSlot(null);
       
     } catch (error) { 
@@ -231,13 +231,13 @@ export default function PublicBooking() {
          
          <div>
             <button onClick={() => router.push("/login")} className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-slate-200 text-slate-500 hover:text-blue-600 px-4 py-2 rounded-full text-[10px] md:text-xs font-bold shadow-sm transition-all hover:bg-white">
-                🔒 Staff Login
+                <LuLock /> Staff Login
             </button>
          </div>
 
          <div className="flex gap-2 md:gap-3">
             <button onClick={handleChatClick} className="relative flex items-center gap-2 bg-white/90 backdrop-blur-md border border-green-200 text-green-700 hover:bg-green-50 px-3 py-2 md:px-5 md:py-2.5 rounded-full text-[10px] md:text-xs font-bold shadow-md transition-all active:scale-95">
-                <span className="text-sm md:text-lg">💬</span> 
+                <LuMessageSquare className="text-sm md:text-lg" /> 
                 <span className="hidden md:inline">Chat</span>
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 md:top-0 md:right-0 bg-red-600 text-white text-[9px] md:text-[10px] font-black w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full animate-pulse shadow-sm ring-2 ring-white">
@@ -301,7 +301,7 @@ export default function PublicBooking() {
         
         {/* 1. SERVICES CARD */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-6 md:p-8 shadow-xl shadow-blue-100/50 border border-blue-50 order-1">
-            <h3 className={`text-lg font-bold text-blue-900 mb-6 flex items-center gap-2 ${notoSinhala.className}`}><span className="bg-red-100 text-red-600 p-2 rounded-lg shadow-sm">🏥</span> අපගේ සේවාවන්</h3>
+            <h3 className={`text-lg font-bold text-blue-900 mb-6 flex items-center gap-2 ${notoSinhala.className}`}><span className="bg-red-100 text-red-600 p-2 rounded-lg shadow-sm"><LuHospital /></span> අපගේ සේවාවන්</h3>
             <ul className="space-y-3">
                 {services.map((s, i) => (
                     <li key={i} className={`flex items-center gap-3 text-slate-700 text-sm font-medium p-2 rounded-lg hover:bg-blue-50 transition ${notoSinhala.className}`}><span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>{s}</li>
@@ -319,7 +319,7 @@ export default function PublicBooking() {
                         <p className="text-xs font-bold text-blue-500 uppercase">Welcome Back</p>
                         <h3 className="text-lg font-bold text-blue-900">{currentUser.name ?? ''}</h3>
                     </div>
-                    <span className="text-2xl">👋</span>
+                    <LuHand className="text-2xl" />
                 </div>
             )}
 
@@ -353,7 +353,7 @@ export default function PublicBooking() {
                             </div>
                         </>
                     ) : (
-                        <p className="text-lg md:text-xl font-bold opacity-60">Please Select a Number Below 👇</p>
+                        <p className="text-lg md:text-xl font-bold opacity-60 flex items-center justify-center gap-2">Please Select a Number Below <LuArrowDown /></p>
                     )}
                 </div>
             </div>
@@ -364,14 +364,14 @@ export default function PublicBooking() {
                 
                 {holidayAlert && holidayAlert.session !== 'full' && (
                     <div className={`mb-4 p-3 rounded-xl border-l-4 text-xs md:text-sm font-bold flex items-center gap-2 ${notoSinhala.className} ${holidayAlert.session === 'morning' ? 'bg-orange-50 border-orange-400 text-orange-800' : 'bg-blue-50 border-blue-400 text-blue-800'}`}>
-                        <span className="text-lg">⚠️</span>
+                        <LuTriangleAlert className="text-lg" />
                         <span>{holidayAlert.session === 'morning' ? `විශේෂ දැනුම්දීමයි: ${dayPrefix} දින උදෑසන වරුව වසා ඇත.` : `විශේෂ දැනුම්දීමයි: ${dayPrefix} දින සවස් වරුව වසා ඇත.`}</span>
                     </div>
                 )}
 
                 {holidayAlert && holidayAlert.session === 'full' ? (
                     <div className={`w-full p-6 md:p-8 rounded-2xl flex flex-col items-center justify-center text-center border-2 border-dashed ${holidayAlert.type === 'poya' ? 'bg-yellow-50 border-yellow-300 text-yellow-800' : 'bg-red-50 border-red-300 text-red-800'}`}>
-                        <span className="text-4xl md:text-5xl mb-3">{holidayAlert.type === 'poya' ? '🌕' : '🚫'}</span>
+                        <span className="text-4xl md:text-5xl mb-3 flex items-center justify-center">{holidayAlert.type === 'poya' ? <LuMoon /> : <LuBan />}</span>
                         <h3 className={`text-lg md:text-xl font-bold mb-1 ${notoSinhala.className}`}>{holidayAlert.message}</h3>
                         <p className="text-xs md:text-sm opacity-80 font-bold">Booking is closed for this day.</p>
                     </div>
@@ -423,7 +423,7 @@ export default function PublicBooking() {
         {/* OPENING HOURS CARD */}
         <div className="lg:col-span-5 bg-blue-900 rounded-3xl p-6 md:p-8 shadow-xl text-white relative overflow-hidden order-3">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20"></div>
-            <h3 className={`text-lg font-bold mb-6 border-b border-blue-700 pb-4 ${notoSinhala.className}`}>⏰ විවෘත වේලාවන්</h3>
+            <h3 className={`text-lg font-bold mb-6 border-b border-blue-700 pb-4 flex items-center gap-2 ${notoSinhala.className}`}><LuClock /> විවෘත වේලාවන්</h3>
             
             {holidayAlert && holidayAlert.session === 'full' ? (
                 <div className={`p-4 rounded-xl text-center font-bold animate-pulse ${holidayAlert.type === "poya" ? "bg-yellow-400 text-yellow-900" : "bg-red-500 text-white"} ${notoSinhala.className}`}>
@@ -434,18 +434,18 @@ export default function PublicBooking() {
                     <div className="flex justify-between items-center bg-blue-800/50 p-3 rounded-xl min-h-[60px]">
                             <span className="text-blue-200 text-sm uppercase tracking-wider">Morning</span>
                             {holidayAlert?.session === 'morning' ? (
-                            <span className={`text-xs font-bold text-red-200 bg-red-900/40 px-2 py-1 rounded border border-red-700/50 ${notoSinhala.className}`}>🚫 {dayPrefix} වසා ඇත</span>
+                            <span className={`text-xs font-bold text-red-200 bg-red-900/40 px-2 py-1 rounded border border-red-700/50 flex items-center gap-1 ${notoSinhala.className}`}><LuBan /> {dayPrefix} වසා ඇත</span>
                             ) : ( <span className="text-xl font-bold">6:30 - 8:00</span> )}
                     </div>
                     <div className="flex justify-between items-center bg-blue-800/50 p-3 rounded-xl min-h-[60px]">
                         <span className="text-blue-200 text-sm uppercase tracking-wider">Evening</span>
                         {holidayAlert?.session === 'evening' ? (
-                            <span className={`text-xs font-bold text-red-200 bg-red-900/40 px-2 py-1 rounded border border-red-700/50 ${notoSinhala.className}`}>🚫 {dayPrefix} වසා ඇත</span>
+                            <span className={`text-xs font-bold text-red-200 bg-red-900/40 px-2 py-1 rounded border border-red-700/50 flex items-center gap-1 ${notoSinhala.className}`}><LuBan /> {dayPrefix} වසා ඇත</span>
                             ) : ( <span className="text-xl font-bold">4:30 - 9:00</span> )}
                     </div>
                 </div>
             )}
-            <div className="mt-6 pt-4 border-t border-blue-700 text-center text-blue-200 text-sm">📞 074 387 7234</div>
+            <div className="mt-6 pt-4 border-t border-blue-700 text-center text-blue-200 text-sm flex items-center justify-center gap-2"><LuPhone /> 074 387 7234</div>
         </div>
 
       </div>

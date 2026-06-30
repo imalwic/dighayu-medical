@@ -6,7 +6,7 @@ import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp,
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Poppins, Noto_Sans_Sinhala } from "next/font/google";
 // Icons
-import { FaPaperPlane, FaMicrophone, FaStop, FaCamera, FaSearch, FaTrash, FaArrowLeft } from "react-icons/fa";
+import { FaPaperPlane, FaMicrophone, FaStop, FaCamera, FaSearch, FaTrash, FaArrowLeft, FaBoxOpen, FaDesktop } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 import AdminNavbar from "@/components/Navbar";
 
@@ -137,7 +137,7 @@ export default function AdminMessages() {
         const url = await getDownloadURL(storageRef);
 
         await addDoc(collection(db, "messages"), {
-            imageUrl: url, type: "image", text: "📷 Image Sent",
+            imageUrl: url, type: "image", text: "Image Sent",
             sender: "doctor", patientId: selectedPatient.uid,
             patientName: selectedPatient.name, receiverId: selectedPatient.uid,
             createdAt: serverTimestamp(), read: false
@@ -179,7 +179,7 @@ export default function AdminMessages() {
           await uploadBytes(storageRef, audioBlob);
           const url = await getDownloadURL(storageRef);
           await addDoc(collection(db, "messages"), {
-              audioUrl: url, type: "audio", text: "🎤 Voice Message",
+              audioUrl: url, type: "audio", text: "Voice Message",
               sender: "doctor", patientId: selectedPatient.uid,
               patientName: selectedPatient.name, receiverId: selectedPatient.uid,
               createdAt: serverTimestamp(), read: false
@@ -196,7 +196,7 @@ export default function AdminMessages() {
   // 8. 🔥 Delete Entire Chat (Clear Chat)
   const handleDeleteChat = async (patientId: string, e: React.MouseEvent) => {
       e.stopPropagation(); 
-      if(!confirm("⚠️ Are you sure? This will hide the chat from the list until a new message arrives.")) return;
+      if(!confirm("Are you sure? This will hide the chat from the list until a new message arrives.")) return;
 
       const q = query(collection(db, "messages"), where("patientId", "==", patientId));
       const snapshot = await getDocs(q);
@@ -205,7 +205,7 @@ export default function AdminMessages() {
       const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, "messages", d.id)));
       await Promise.all(deletePromises);
 
-      alert("Chat cleared! ✅");
+      alert("Chat cleared!");
       if(selectedPatient?.uid === patientId) setSelectedPatient(null);
   };
 
@@ -246,8 +246,8 @@ export default function AdminMessages() {
             {/* List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {finalDisplayList.length === 0 ? (
-                    <div className="text-center mt-10 opacity-50">
-                        <p className="text-4xl mb-2">📭</p>
+                    <div className="text-center mt-10 opacity-50 flex flex-col items-center">
+                        <FaBoxOpen className="text-4xl mb-2" />
                         <p className="text-sm font-bold">No active chats</p>
                     </div>
                 ) : (
@@ -294,7 +294,7 @@ export default function AdminMessages() {
             {!selectedPatient ? (
                 // Empty State
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-[#f0f2f5] border-b-8 border-[#00a884]">
-                    <span className="text-6xl mb-4 grayscale opacity-50">💻</span>
+                    <FaDesktop className="text-6xl mb-4 opacity-50" />
                     <h2 className="text-2xl font-light text-slate-600 mb-2">Doctor Web</h2>
                     <p className="text-sm">Select a chat to start messaging.</p>
                 </div>

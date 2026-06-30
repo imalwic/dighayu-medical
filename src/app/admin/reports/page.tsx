@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase'; 
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import AdminNavbar from "@/components/Navbar"; // 🔥 1. Navbar එක Import කළා
+import { LuChartBar, LuTrendingUp, LuFileText, LuDownload } from "react-icons/lu";
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import jsPDF from 'jspdf';
@@ -122,7 +123,7 @@ export default function ReportsPage() {
       {/* 🔥 3. pt-24 දැම්මා Navbar එකට යට නොවී පේන්න */}
       <div className="max-w-6xl mx-auto px-6 pt-24 pb-12">
         <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-black text-slate-800">📊 Financial Reports</h1>
+            <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3"><LuChartBar className="text-3xl" /> Financial Reports</h1>
             <div className="flex gap-3">
                 <select value={dateRange} onChange={handleFilterChange} className="p-2 border border-slate-300 rounded-lg font-bold text-slate-700 outline-none">
                     <option value="today">Today</option>
@@ -130,7 +131,7 @@ export default function ReportsPage() {
                     <option value="month">Last 30 Days</option>
                     <option value="all">All Time</option>
                 </select>
-                <button onClick={downloadPDF} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-red-700 transition">Download PDF 📥</button>
+                <button onClick={downloadPDF} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-red-700 transition flex items-center gap-2"><LuDownload /> Download PDF</button>
             </div>
         </div>
 
@@ -156,7 +157,7 @@ export default function ReportsPage() {
 
         {/* Chart Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-            <h3 className="font-bold text-lg mb-4 text-slate-700">📈 Revenue Trend</h3>
+            <h3 className="font-bold text-lg mb-4 text-slate-700 flex items-center gap-2"><LuTrendingUp /> Revenue Trend</h3>
             <div className="h-64">
                 <Bar options={{ responsive: true, maintainAspectRatio: false }} data={chartData} />
             </div>
@@ -164,7 +165,7 @@ export default function ReportsPage() {
 
         {/* Recent Transactions Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-4 border-b bg-slate-100"><h3 className="font-bold text-slate-700">📝 Recent Transactions</h3></div>
+            <div className="p-4 border-b bg-slate-100"><h3 className="font-bold text-slate-700 flex items-center gap-2"><LuFileText /> Recent Transactions</h3></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
                     <thead className="bg-slate-50 text-slate-500 uppercase text-xs">

@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Noto_Sans_Sinhala, Poppins } from "next/font/google";
 import AdminNavbar from "@/components/Navbar";
+import { LuRefreshCw, LuBox } from "react-icons/lu";
 
 const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["400", "700"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"] });
@@ -77,7 +78,7 @@ export default function InventoryPage() {
         batchNo,
         createdAt: serverTimestamp()
       });
-      alert("Medicine Added Successfully! ✅");
+      alert("Medicine Added Successfully!");
       setName(""); setQuantity(""); setPrice(""); setExpiry(""); 
       setShowAddForm(false); 
     } catch (error) {
@@ -90,7 +91,7 @@ export default function InventoryPage() {
 
   // 3. Delete Medicine
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to DELETE this medicine? 🗑️")) {
+    if (confirm("Are you sure you want to DELETE this medicine?")) {
         try {
             await deleteDoc(doc(db, "medicines", id));
         } catch (error) {
@@ -173,7 +174,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
                 <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-lg font-black text-slate-800">🔄 Update Stock</h3>
+                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><LuRefreshCw /> Update Stock</h3>
                     <button onClick={() => setShowUpdateModal(false)} className="bg-slate-200 p-2 rounded-full hover:bg-slate-300">✕</button>
                 </div>
                 
@@ -212,7 +213,7 @@ export default function InventoryPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
-                📦 Inventory
+                <LuBox /> Inventory
                 <span className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full border border-blue-200">{medicines.length} Items</span>
             </h1>
             

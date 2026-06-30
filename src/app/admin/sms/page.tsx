@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
 import AdminNavbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { LuHistory } from "react-icons/lu";
 import { useRouter } from 'next/navigation';
 
 // --- Icons ---
@@ -127,7 +128,7 @@ export default function SMSPage() {
         const result = await response.json();
         
         if(result.success) {
-            alert(`Batch ${batchIndex + 1} Sent Successfully! ✅`);
+            alert(`Batch ${batchIndex + 1} Sent Successfully!`);
             setSentBatches(prev => [...prev, batchIndex]);
         } else {
             alert("Error sending batch: " + result.error);
@@ -251,7 +252,7 @@ export default function SMSPage() {
             {/* RIGHT: History */}
              <div className="lg:col-span-5 bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-200 h-[600px] md:h-auto md:min-h-[700px] flex flex-col relative overflow-hidden">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-bold text-slate-800">📜 History</h2>
+                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><LuHistory /> History</h2>
                     {sentMessages.length > 0 && (
                         <button onClick={handleClearHistory} disabled={clearing} className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-xl hover:bg-red-100 transition flex items-center gap-1">
                             <TrashIcon /> Clear

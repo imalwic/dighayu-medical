@@ -6,9 +6,9 @@ export async function POST(request: Request) {
     const { to, message } = body;
 
     // 👇 ඔබේ විස්තර
-    const USER_ID = "30935"; 
-    const API_KEY = "8edcMQXLgiYFolVwIsOw"; 
-    const SENDER_ID = "NotifyDEMO"; // Sender ID එක ලැබුනු පසු මෙතන වෙනස් කරන්න
+    const USER_ID = process.env.SMS_USER_ID; 
+    const API_KEY = process.env.SMS_API_KEY; 
+    const SENDER_ID = process.env.SMS_SENDER_ID || "NotifyDEMO"; // Sender ID එක ලැබුනු පසු මෙතන වෙනස් කරන්න
 
     // 1. Frontend එකෙන් එන නම්බර්ස් වෙන් කරගැනීම
     const phoneNumbers = to.split(',');

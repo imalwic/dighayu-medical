@@ -67,7 +67,7 @@ export default function PatientRegister() {
         createdAt: serverTimestamp(),
       });
 
-      alert("Registration Successful! ✅ \nදැන් ඔබට Login විය හැක.");
+      alert("Registration Successful! \nදැන් ඔබට Login විය හැක.");
       router.push("/"); 
     } catch (err: any) {
       console.error(err);

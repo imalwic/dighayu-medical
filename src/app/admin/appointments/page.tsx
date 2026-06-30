@@ -4,6 +4,10 @@ import React, { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import AdminNavbar from "@/components/Navbar";
+import { 
+  LuFileText, LuPill, LuCalendar, LuTriangleAlert, 
+  LuSun, LuMoon, LuStethoscope 
+} from "react-icons/lu";
 
 // --- Icons ---
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
@@ -161,7 +165,7 @@ export default function AppointmentsPage() {
           }
 
           setIsModalOpen(false);
-          alert("Sent to Pharmacy! 💊");
+          alert("Sent to Pharmacy!");
       } catch (e) { console.error(e); alert("Error sending order"); }
   };
 
@@ -209,7 +213,7 @@ export default function AppointmentsPage() {
                       
                       {/* Left: Input Form (Scrollable on mobile) */}
                       <div className="w-full lg:w-5/12 p-4 md:p-6 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-slate-50">
-                          <h3 className="font-black text-slate-700 mb-4 uppercase tracking-widest text-xs flex items-center gap-2">📝 Consultation Details</h3>
+                          <h3 className="font-black text-slate-700 mb-4 uppercase tracking-widest text-xs flex items-center gap-2"><LuFileText /> Consultation Details</h3>
                           
                           <div className="mb-5">
                               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Diagnosis</label>
@@ -252,9 +256,9 @@ export default function AppointmentsPage() {
                               <div className="mb-4">
                                   <select className="w-full p-2.5 border-2 border-slate-200 rounded-xl font-bold text-slate-600 outline-none focus:border-blue-500 text-sm bg-slate-50"
                                       value={medInput.timing} onChange={e => setMedInput({...medInput, timing: e.target.value})}>
-                                      <option value="After Meal">🍽️ After Meal</option>
-                                      <option value="Before Meal">🥣 Before Meal</option>
-                                      <option value="With Meal">🥗 With Meal</option>
+                                      <option value="After Meal">After Meal</option>
+                                      <option value="Before Meal">Before Meal</option>
+                                      <option value="With Meal">With Meal</option>
                                   </select>
                               </div>
 
@@ -270,12 +274,12 @@ export default function AppointmentsPage() {
 
                       {/* Right: Prescription List (Scrollable) */}
                       <div className="w-full lg:w-7/12 p-4 md:p-6 flex flex-col bg-white h-full">
-                          <h3 className="font-black text-slate-700 mb-4 uppercase tracking-widest text-xs border-b pb-2">💊 Current Prescription</h3>
+                          <h3 className="font-black text-slate-700 mb-4 uppercase tracking-widest text-xs border-b pb-2 flex items-center gap-2"><LuPill /> Current Prescription</h3>
                           
                           <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 space-y-2 pr-1">
                               {prescribedMeds.length === 0 ? (
                                   <div className="flex flex-col items-center justify-center h-40 text-slate-300 border-2 border-dashed border-slate-100 rounded-xl">
-                                      <span className="text-3xl mb-2 opacity-50">💊</span>
+                                      <span className="text-3xl mb-2 opacity-50"><LuPill className="w-8 h-8" /></span>
                                       <p className="font-bold text-sm">No medicines added yet.</p>
                                   </div>
                               ) : prescribedMeds.map((item, idx) => (
@@ -307,7 +311,7 @@ export default function AppointmentsPage() {
                                   </div>
                               </div>
                               <button onClick={handleSendToPharmacy} disabled={prescribedMeds.length === 0} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-black text-base md:text-lg hover:shadow-blue-200 hover:shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2">
-                                  Confirm & Send to Pharmacy 🚀
+                                  Confirm & Send to Pharmacy
                               </button>
                           </div>
                       </div>
@@ -326,7 +330,7 @@ export default function AppointmentsPage() {
                 
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 relative z-10 gap-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900">🗓️ Appointments</h1>
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-3"><LuCalendar className="text-3xl" /> Appointments</h1>
                         <p className="text-slate-500 font-medium text-sm mt-1">Manage today's patient queue.</p>
                     </div>
                     
@@ -352,14 +356,14 @@ export default function AppointmentsPage() {
             
             {/* Walk-in Button */}
             <button onClick={openEmergencyConsultation} className="md:w-64 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-6 rounded-3xl font-black text-lg shadow-xl shadow-red-200 border-4 border-white ring-2 ring-red-100 transform hover:scale-[1.02] transition flex flex-col items-center justify-center gap-2 group">
-                <span className="text-3xl group-hover:scale-110 transition">🚨</span>
+                <span className="text-3xl group-hover:scale-110 transition"><LuTriangleAlert /></span>
                 <span>Emergency / Walk-in</span>
             </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 pb-12">
-            <SessionCard title="☀️ Morning Session" list={morningList} onConsult={openConsultation} onDelete={handleDelete} color="blue" />
-            <SessionCard title="🌙 Evening Session" list={eveningList} onConsult={openConsultation} onDelete={handleDelete} color="indigo" />
+            <SessionCard title={<span className="flex items-center gap-2"><LuSun className="text-blue-500"/> Morning Session</span>} list={morningList} onConsult={openConsultation} onDelete={handleDelete} color="blue" />
+            <SessionCard title={<span className="flex items-center gap-2"><LuMoon className="text-indigo-500"/> Evening Session</span>} list={eveningList} onConsult={openConsultation} onDelete={handleDelete} color="indigo" />
         </div>
       </div>
     </div>
@@ -396,7 +400,7 @@ function SessionCard({ title, list, onConsult, onDelete, color }: any) {
                             {app.status !== 'completed' && (
                                 <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
                                     <button onClick={() => onConsult(app)} className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition transform active:scale-95 flex items-center justify-center gap-2">
-                                        Start 🩺
+                                        Start <LuStethoscope className="w-4 h-4" />
                                     </button>
                                     <button onClick={() => onDelete(app.id)} className="w-10 h-10 flex items-center justify-center bg-white border-2 border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition">
                                         <TrashIcon />

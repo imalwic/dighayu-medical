@@ -6,6 +6,7 @@ import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, runTrans
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import AdminNavbar from "@/components/Navbar";
+import { LuBanknote, LuReceipt, LuPill, LuUser } from "react-icons/lu";
 
 // --- Types ---
 interface CartItem {
@@ -108,7 +109,7 @@ export default function BillingPage() {
 
   // Add Item Logic
   const addToBill = (item: InventoryItem) => {
-    if (item.quantity <= 0) return alert(`❌ Out of Stock: ${item.name}`);
+    if (item.quantity <= 0) return alert(`Out of Stock: ${item.name}`);
 
     const existing = cart.find((c) => c.id === item.id);
     if (existing) {
@@ -296,7 +297,7 @@ export default function BillingPage() {
             
             {/* Modal Header */}
             <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
-                <h2 className="text-2xl font-black text-slate-800">💰 Checkout</h2>
+                <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2"><LuBanknote /> Checkout</h2>
                 <button onClick={() => setShowPayment(false)} className="bg-slate-200 p-2 rounded-full hover:bg-slate-300 transition"><CloseIcon /></button>
             </div>
 
@@ -354,10 +355,10 @@ export default function BillingPage() {
         {/* MOBILE TABS (Visible only on small screens) */}
         <div className="lg:hidden absolute top-20 left-0 right-0 z-20 bg-white border-b border-slate-200 flex shadow-sm">
             <button onClick={() => setActiveTab('billing')} className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 ${activeTab === 'billing' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500'}`}>
-                <span>🧾 Billing</span>
+                <span className="flex items-center gap-1"><LuReceipt /> Billing</span>
             </button>
             <button onClick={() => setActiveTab('queue')} className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 ${activeTab === 'queue' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500'}`}>
-                <span>💊 Queue</span> <span className="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
+                <span className="flex items-center gap-1"><LuPill /> Queue</span> <span className="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
             </button>
         </div>
 
@@ -371,7 +372,7 @@ export default function BillingPage() {
                     Billing <span className="text-slate-300">/</span>
                     {selectedOrder ? (
                         <span className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full border border-yellow-200 shadow-sm flex items-center gap-1">
-                            👤 {selectedOrder.patientName}
+                            <LuUser /> {selectedOrder.patientName}
                         </span>
                     ) : (
                         <span className="text-sm bg-slate-100 text-slate-500 px-3 py-1 rounded-full border border-slate-200">Walk-in</span>
@@ -475,7 +476,7 @@ export default function BillingPage() {
           <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
             {doctorCharge > 0 && (
                 <div className="flex justify-between items-center mb-2 px-2 text-sm">
-                    <span className="font-bold text-slate-500 flex items-center gap-1">👨‍⚕️ Professional Fees</span>
+                    <span className="font-bold text-slate-500 flex items-center gap-1"><LuUser /> Professional Fees</span>
                     <span className="font-bold text-slate-800">Rs. {doctorCharge}</span>
                 </div>
             )}

@@ -6,6 +6,7 @@ import { Noto_Sans_Sinhala, Poppins } from "next/font/google";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase"; // Auth import
 import { signOut, onAuthStateChanged } from "firebase/auth"; // Auth functions
+import { LuMessageSquare } from "react-icons/lu";
 
 const notoSinhala = Noto_Sans_Sinhala({ subsets: ["sinhala"], weight: ["700", "900"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
@@ -111,7 +112,7 @@ export default function Navbar() {
                         Reports
                     </Link>
                     <Link href="/admin/messages" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${isActive("/admin/messages")}`}>
-                        Messages 💬
+                        Messages <LuMessageSquare className="w-4 h-4" />
                     </Link>
                 </>
             )}

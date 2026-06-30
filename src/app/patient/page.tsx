@@ -6,6 +6,7 @@ import { collection, query, getDocs, deleteDoc, doc, orderBy, addDoc, serverTime
 import AdminNavbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useRouter } from 'next/navigation';
+import { LuPlus, LuSearch } from "react-icons/lu";
 
 // --- Icons for better UI ---
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
@@ -99,7 +100,7 @@ export default function PatientPage() {
         setPatients(prev => [newObj, ...prev]);
         setNewName("");
         setNewPhone("");
-        alert("Registered successfully! ✅");
+        alert("Registered successfully!");
 
     } catch (error) {
         console.error(error);
@@ -116,7 +117,7 @@ export default function PatientPage() {
     try {
       await deleteDoc(doc(db, sourceCollection, id));
       setPatients(prev => prev.filter(p => p.id !== id));
-      alert("Deleted successfully! 🗑️");
+      alert("Deleted successfully!");
     } catch (error) {
       console.error("Error deleting:", error);
       alert("Failed to delete. Check console.");
@@ -148,7 +149,7 @@ export default function PatientPage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-10 -mt-10 opacity-50"></div>
             
             <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3 relative z-10">
-                <span className="bg-blue-100 text-blue-600 p-2 rounded-xl text-lg shadow-sm">➕</span> Register New Patient
+                <span className="bg-blue-100 text-blue-600 p-2 rounded-xl text-lg shadow-sm"><LuPlus /></span> Register New Patient
             </h3>
             
             <form onSubmit={handleAddPatient} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end relative z-10">
@@ -216,7 +217,7 @@ export default function PatientPage() {
                 </div>
             ) : filteredPatients.length === 0 ? (
                 <div className="p-12 text-center flex flex-col items-center">
-                    <span className="text-4xl mb-2 opacity-50">🔍</span>
+                    <LuSearch className="text-4xl mb-2 opacity-50" />
                     <p className="font-bold text-slate-400">No patients found.</p>
                 </div>
             ) : (

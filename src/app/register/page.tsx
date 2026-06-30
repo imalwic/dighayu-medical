@@ -20,8 +20,7 @@ export default function Register() {
     setError("");
 
     // Admin වෙන්න හදනවා නම් Secret Key එක හරිද බලනවා
-    // (මේක ඔයාට කැමති කෝඩ් එකක් දාගන්න පුළුවන්. මම දාලා තියෙන්නේ 'doctor123')
-    if (role === "admin" && secretKey !== "doctor123") {
+    if (role === "admin" && secretKey !== process.env.NEXT_PUBLIC_ADMIN_SECRET) {
       setError("Admin ලියාපදිංචිය සඳහා නිවැරදි රහස් කේතය (Secret Key) ඇතුළත් කරන්න.");
       return;
     }
