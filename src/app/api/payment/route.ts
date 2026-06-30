@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2025-01-27.acacia' as any, // using a stable version fallback
-});
+// Stripe will be initialized inside the handler to prevent Vercel build errors if env vars are missing
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +10,15 @@ export async function POST(req: Request) {
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
     }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+        throw new Error("Stripe Secret Key is missing on the server.");
+    }
+
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: '2025-01-27.acacia' as any,
+    });
 
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
