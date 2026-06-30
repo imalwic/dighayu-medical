@@ -293,7 +293,7 @@ export default function AdminDashboard() {
 
             {/* 5. Reports (Admin Only) */}
             {userRole === 'admin' && (
-                <Link href="/sales" className="bg-orange-50 border border-orange-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-orange-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-orange-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300"><LuBarChart2 /></span><span className="font-bold text-orange-900 text-sm md:text-base">Reports</span></Link>
+                <Link href="/sales" className="bg-orange-50 border border-orange-100 p-4 md:p-6 rounded-3xl shadow-sm hover:shadow-md hover:bg-orange-100 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center gap-2 group"><span className="text-2xl md:text-3xl bg-white text-orange-600 p-2 md:p-3 rounded-2xl shadow-sm group-hover:scale-110 transition duration-300"><LuChartBar /></span><span className="font-bold text-orange-900 text-sm md:text-base">Reports</span></Link>
             )}
 
             {/* 6. SMS (Admin Only) */}
